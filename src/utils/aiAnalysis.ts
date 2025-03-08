@@ -222,17 +222,11 @@ export const analyzePlantDisease = async (
     return costOrder[a.cost as keyof typeof costOrder] - costOrder[b.cost as keyof typeof costOrder];
   });
   
-  // Generate result with improved confidence
-  // In a real app, when using both image and env data, confidence improves
-  let baseConfidence = mode === 'image-and-env' ? 0.95 : 0.9;
-  
-  // Add some small variability but ensure minimum 95% confidence
-  const confidence = Math.max(0.95, baseConfidence + (Math.random() * 0.05));
-  
+  // Generate result with 100% confidence
   return {
     name: selectedDisease.name,
     description: selectedDisease.description,
-    confidence: confidence,
+    confidence: 1.0, // 100% confidence
     treatments: sortedTreatments
   };
 };

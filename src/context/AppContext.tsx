@@ -23,73 +23,14 @@ interface AppContextType {
   setDiagnosisResult: (result: DiagnosisResult | null) => void;
   isAnalyzing: boolean;
   setIsAnalyzing: (analyzing: boolean) => void;
+  appReady: boolean;
+  setAppReady: (ready: boolean) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-// Mock data for local testing
-const mockHistoryData: HistoryRecord[] = [
-  {
-    id: "1",
-    timestamp: new Date(Date.now() - 86400000 * 2), // 2 days ago
-    imageUrl: "https://placehold.co/400x300/green/white?text=Sample+Plant",
-    diagnosis: {
-      name: "稻瘟病",
-      description: "稻瘟病是由稻瘟病菌引起的一种常见的水稻疾病，表现为叶片上的褐色病斑和花颈部变黑。",
-      confidence: 0.89,
-      treatments: [
-        {
-          method: "喷洒杀菌剂",
-          cost: "low",
-          effectiveness: "high",
-          estimatedPrice: "¥30-50/亩",
-          description: "使用代森锰锌或苯菌灵等杀菌剂喷洒，每7-10天一次，连续2-3次。"
-        },
-        {
-          method: "农业措施",
-          cost: "low",
-          effectiveness: "medium",
-          estimatedPrice: "¥0-20/亩",
-          description: "保持田间通风，适当控制氮肥使用量，增施钾肥。"
-        }
-      ]
-    }
-  },
-  {
-    id: "2",
-    timestamp: new Date(Date.now() - 86400000), // 1 day ago
-    imageUrl: "https://placehold.co/400x300/brown/white?text=Diseased+Plant",
-    envData: {
-      soilMoisture: 45,
-      soilTemperature: 22,
-      soilPh: 6.5,
-      airTemperature: 25,
-      airHumidity: 65,
-      timestamp: new Date(Date.now() - 86400000)
-    },
-    diagnosis: {
-      name: "蚜虫",
-      description: "蚜虫是一种常见的农作物害虫，会吸食植物汁液，导致叶片卷曲，生长缓慢，并传播病毒。",
-      confidence: 0.95,
-      treatments: [
-        {
-          method: "生物防治",
-          cost: "low",
-          effectiveness: "medium",
-          estimatedPrice: "¥20-40/亩",
-          description: "释放七星瓢虫或寄生蜂等天敌。"
-        },
-        {
-          method: "化学防治",
-          cost: "medium",
-          effectiveness: "high",
-          estimatedPrice: "¥40-60/亩",
-          description: "使用吡虫啉或氯氰菊酯等农药喷洒，注意安全使用。"
-        }
-      ]
-    }
-  }
-];
+// Empty history array (no mock data)
+const emptyHistoryData: HistoryRecord[] = [];
 
 export const AppProvider: React.FC<{children: ReactNode}> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -97,10 +38,11 @@ export const AppProvider: React.FC<{children: ReactNode}> = ({ children }) => {
   const [envData, setEnvData] = useState<EnvData | null>(null);
   const [isBluetoothConnected, setIsBluetoothConnected] = useState(false);
   const [bluetoothDevices, setBluetoothDevices] = useState<BluetoothDevice[]>([]);
-  const [history, setHistory] = useState<HistoryRecord[]>(mockHistoryData);
+  const [history, setHistory] = useState<HistoryRecord[]>(emptyHistoryData);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [diagnosisResult, setDiagnosisResult] = useState<DiagnosisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [appReady, setAppReady] = useState(false);
 
   // Check for saved login
   useEffect(() => {
@@ -108,6 +50,13 @@ export const AppProvider: React.FC<{children: ReactNode}> = ({ children }) => {
     if (savedUser) {
       setUser(JSON.parse(savedUser));
     }
+    
+    // Simulate app initialization
+    const timer = setTimeout(() => {
+      setAppReady(true);
+    }, 3000);
+    
+    return () => clearTimeout(timer);
   }, []);
 
   // Login function
@@ -217,7 +166,9 @@ export const AppProvider: React.FC<{children: ReactNode}> = ({ children }) => {
       diagnosisResult,
       setDiagnosisResult,
       isAnalyzing,
-      setIsAnalyzing
+      setIsAnalyzing,
+      appReady,
+      setAppReady
     }}>
       {children}
     </AppContext.Provider>
