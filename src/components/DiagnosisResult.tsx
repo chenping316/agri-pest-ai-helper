@@ -3,7 +3,7 @@ import React from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { DiagnosisResult as DiagnosisResultType } from "@/types";
-import { AlertTriangle, CheckCircle2, DollarSign, ZapIcon } from "lucide-react";
+import { AlertTriangle, CheckCircle2, DollarSign, ZapIcon, ListChecks } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface DiagnosisResultComponentProps {
@@ -70,8 +70,11 @@ const DiagnosisResult: React.FC<DiagnosisResultComponentProps> = ({
         </div>
         
         <div>
-          <h4 className="font-medium mb-2">推荐处理方法</h4>
-          <div className="space-y-3">
+          <h4 className="font-medium mb-2 flex items-center">
+            <ListChecks className="h-4 w-4 mr-1 text-primary" />
+            推荐处理方法 ({result.treatments.length}种)
+          </h4>
+          <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
             {result.treatments.map((treatment, index) => (
               <div key={index} className="p-3 bg-muted/40 rounded-lg">
                 <div className="flex justify-between items-center mb-2">

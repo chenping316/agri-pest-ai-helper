@@ -29,6 +29,20 @@ export const analyzePlantDisease = async (
           effectiveness: "medium",
           estimatedPrice: "¥0-20/亩",
           description: "保持田间通风，适当控制氮肥使用量，增施钾肥。"
+        },
+        {
+          method: "水稻品种改良",
+          cost: "medium",
+          effectiveness: "high",
+          estimatedPrice: "¥50-100/亩",
+          description: "选用抗稻瘟病品种，可显著减少病害发生。"
+        },
+        {
+          method: "生物防治",
+          cost: "medium",
+          effectiveness: "medium",
+          estimatedPrice: "¥40-60/亩",
+          description: "使用枯草芽孢杆菌等微生物制剂，抑制病原菌生长。"
         }
       ]
     },
@@ -49,6 +63,20 @@ export const analyzePlantDisease = async (
           effectiveness: "high",
           estimatedPrice: "¥40-60/亩",
           description: "使用吡虫啉或氯氰菊酯等农药喷洒，注意安全使用。"
+        },
+        {
+          method: "物理防治",
+          cost: "low",
+          effectiveness: "low",
+          estimatedPrice: "¥10-30/亩",
+          description: "使用黄色粘虫板诱捕蚜虫，适用于小面积种植。"
+        },
+        {
+          method: "种植驱虫植物",
+          cost: "low",
+          effectiveness: "medium",
+          estimatedPrice: "¥15-35/亩",
+          description: "间作种植大蒜、万寿菊等具有驱虫作用的植物。"
         }
       ]
     },
@@ -69,6 +97,20 @@ export const analyzePlantDisease = async (
           effectiveness: "high",
           estimatedPrice: "¥50-70/亩",
           description: "喷洒甲霜灵或烯酰吗啉等药剂，每7-14天一次。"
+        },
+        {
+          method: "土壤处理",
+          cost: "medium",
+          effectiveness: "medium",
+          estimatedPrice: "¥40-60/亩",
+          description: "使用石灰或硫磺粉改良土壤酸碱度，创造不利于病菌生存的环境。"
+        },
+        {
+          method: "生态控制",
+          cost: "high",
+          effectiveness: "high",
+          estimatedPrice: "¥70-100/亩",
+          description: "使用塑料薄膜覆盖，进行土壤太阳能消毒，杀灭土壤中的病原菌。"
         }
       ]
     },
@@ -89,6 +131,54 @@ export const analyzePlantDisease = async (
           effectiveness: "high",
           estimatedPrice: "¥40-60/亩",
           description: "使用戊唑醇或嘧菌酯等杀菌剂喷洒，每10-14天一次。"
+        },
+        {
+          method: "抗病栽培",
+          cost: "medium",
+          effectiveness: "high",
+          estimatedPrice: "¥30-50/亩",
+          description: "选用抗锈病品种，增强植物抵抗力。"
+        },
+        {
+          method: "营养调控",
+          cost: "low",
+          effectiveness: "medium",
+          estimatedPrice: "¥20-40/亩",
+          description: "合理施肥，增加钾肥用量，提高植物抗病能力。"
+        }
+      ]
+    },
+    {
+      name: "白粉病",
+      description: "白粉病是由子囊菌引起的植物病害，表现为叶片、茎和花上出现白色粉状物，严重影响光合作用。",
+      treatments: [
+        {
+          method: "有机杀菌剂",
+          cost: "low",
+          effectiveness: "medium",
+          estimatedPrice: "¥25-45/亩",
+          description: "喷洒碳酸氢钾或硫磺制剂，对环境友好且成本较低。"
+        },
+        {
+          method: "化学杀菌剂",
+          cost: "medium",
+          effectiveness: "high",
+          estimatedPrice: "¥50-70/亩",
+          description: "使用三唑类杀菌剂或嘧菌酯等喷洒，效果显著。"
+        },
+        {
+          method: "通风管理",
+          cost: "low",
+          effectiveness: "medium",
+          estimatedPrice: "¥10-30/亩",
+          description: "改善通风条件，减少湿度，合理密植，创造不利于病菌繁殖的环境。"
+        },
+        {
+          method: "生物防治",
+          cost: "medium",
+          effectiveness: "medium",
+          estimatedPrice: "¥35-55/亩",
+          description: "使用寄生真菌或拮抗微生物制剂，抑制白粉病菌的生长。"
         }
       ]
     }
