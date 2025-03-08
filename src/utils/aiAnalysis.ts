@@ -1,4 +1,3 @@
-
 import { AnalysisMode, DiagnosisResult, EnvData } from "@/types";
 
 // Mock API for diagnosing plant diseases
@@ -187,8 +186,34 @@ export const analyzePlantDisease = async (
   // Simulate analysis delay
   await new Promise(resolve => setTimeout(resolve, 2000));
   
-  // Randomly select a disease
-  const randomDiseaseIndex = Math.floor(Math.random() * possibleDiseases.length);
+  // AI model enhanced selection based on mode
+  // Using environment data when available improves accuracy
+  let randomDiseaseIndex = 0;
+  
+  if (mode === 'image-and-env' && envData) {
+    // In a real app, this would use a more sophisticated algorithm
+    // For now, we'll use a deterministic approach based on env data
+    const soilMoistureThreshold = 60;
+    const soilPhThreshold = 6.5;
+    
+    if (envData.soilMoisture > soilMoistureThreshold && envData.soilPh < soilPhThreshold) {
+      // High moisture and acidic soil often leads to fungal diseases
+      randomDiseaseIndex = 0; // 稻瘟病 (fungal disease)
+    } else if (envData.airTemperature > 25 && envData.airHumidity < 50) {
+      // Hot and dry conditions often lead to insect pests
+      randomDiseaseIndex = 1; // 蚜虫 (aphids)
+    } else if (envData.soilMoisture > soilMoistureThreshold && envData.airHumidity > 70) {
+      // High moisture and humidity often leads to mildew diseases
+      randomDiseaseIndex = 2; // 霜霉病 (downy mildew)
+    } else {
+      // Other conditions
+      randomDiseaseIndex = Math.min(3 + Math.floor(Math.random() * 2), possibleDiseases.length - 1);
+    }
+  } else {
+    // Image-only mode uses a more basic approach
+    randomDiseaseIndex = Math.floor(Math.random() * possibleDiseases.length);
+  }
+  
   const selectedDisease = possibleDiseases[randomDiseaseIndex];
   
   // Sort treatments by cost (lowest first)
@@ -197,11 +222,17 @@ export const analyzePlantDisease = async (
     return costOrder[a.cost as keyof typeof costOrder] - costOrder[b.cost as keyof typeof costOrder];
   });
   
-  // Generate result with confidence
+  // Generate result with improved confidence
+  // In a real app, when using both image and env data, confidence improves
+  let baseConfidence = mode === 'image-and-env' ? 0.95 : 0.9;
+  
+  // Add some small variability but ensure minimum 95% confidence
+  const confidence = Math.max(0.95, baseConfidence + (Math.random() * 0.05));
+  
   return {
     name: selectedDisease.name,
     description: selectedDisease.description,
-    confidence: 0.7 + Math.random() * 0.25, // Random confidence between 70% and 95%
+    confidence: confidence,
     treatments: sortedTreatments
   };
 };
