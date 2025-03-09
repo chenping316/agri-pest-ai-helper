@@ -1,4 +1,3 @@
-
 export interface User {
   id: string;
   username: string;
@@ -33,6 +32,7 @@ export interface HistoryRecord {
   id: string;
   timestamp: Date;
   imageUrl: string;
+  plantType?: string;
   envData?: EnvData;
   diagnosis: DiagnosisResult;
 }
@@ -43,4 +43,10 @@ export interface BluetoothDevice {
   id: string;
   name: string;
   connected: boolean;
+}
+
+export interface PlantType {
+  id: string;
+  name: string;
+  category: string;
 }

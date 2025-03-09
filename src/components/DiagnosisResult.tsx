@@ -3,7 +3,9 @@ import React from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { DiagnosisResult as DiagnosisResultType } from "@/types";
-import { AlertTriangle, CheckCircle2, DollarSign, ZapIcon, ListChecks } from "lucide-react";
+import { AlertTriangle, CheckCircle2, DollarSign, ZapIcon, ListChecks, Search } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { openBaiduSearch } from "@/utils/aiAnalysis";
 import { cn } from "@/lib/utils";
 
 interface DiagnosisResultComponentProps {
@@ -43,6 +45,10 @@ const DiagnosisResult: React.FC<DiagnosisResultComponentProps> = ({
     }
   };
 
+  const handleSearchSymptoms = () => {
+    openBaiduSearch(`${result.name} 症状 图片`);
+  };
+
   return (
     <Card className={cn("w-full", className)}>
       <CardHeader className="p-4 sm:p-6">
@@ -65,7 +71,18 @@ const DiagnosisResult: React.FC<DiagnosisResultComponentProps> = ({
       </CardHeader>
       <CardContent className="space-y-3 p-4 sm:p-6 sm:pt-0 pt-0">
         <div>
-          <h4 className="font-medium mb-1 text-sm sm:text-base">症状与描述</h4>
+          <div className="flex justify-between items-center mb-1">
+            <h4 className="font-medium text-sm sm:text-base">症状与描述</h4>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="h-8 text-xs" 
+              onClick={handleSearchSymptoms}
+            >
+              <Search className="h-3 w-3 mr-1" />
+              百度搜索
+            </Button>
+          </div>
           <p className="text-xs sm:text-sm text-muted-foreground">{result.description}</p>
         </div>
         
@@ -98,6 +115,18 @@ const DiagnosisResult: React.FC<DiagnosisResultComponentProps> = ({
                     <span>推荐方案: 性价比最高</span>
                   </div>
                 )}
+                
+                <div className="mt-1 sm:mt-2">
+                  <Button 
+                    variant="link" 
+                    size="sm" 
+                    className="h-6 p-0 text-[10px] sm:text-xs text-blue-600 dark:text-blue-400"
+                    onClick={() => openBaiduSearch(`${result.name} ${treatment.method} 详细步骤`)}
+                  >
+                    <Search className="h-2 w-2 sm:h-3 sm:w-3 mr-1" />
+                    搜索详细步骤
+                  </Button>
+                </div>
               </div>
             ))}
           </div>

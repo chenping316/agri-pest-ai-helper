@@ -1,19 +1,27 @@
 import { AnalysisMode, DiagnosisResult, EnvData } from "@/types";
 
+// Function to open Baidu search in a new tab
+export const openBaiduSearch = (query: string) => {
+  const encodedQuery = encodeURIComponent(query);
+  window.open(`https://www.baidu.com/s?wd=${encodedQuery}`, '_blank');
+};
+
 // Mock API for diagnosing plant diseases
 export const analyzePlantDisease = async (
   imageBase64: string,
   mode: AnalysisMode,
+  plantType?: string,
   envData?: EnvData
 ): Promise<DiagnosisResult> => {
-  console.log(`Analyzing image with mode: ${mode}`);
+  console.log(`Analyzing image with mode: ${mode}, plant type: ${plantType || 'not specified'}`);
   
   // In a real app, this would send the image to an AI model or API
-  // Since this is a UI mock, we'll return random results
+  // Since this is a UI mock, we'll return results based on plant type when available
   const possibleDiseases = [
     {
       name: "稻瘟病",
       description: "稻瘟病是由稻瘟病菌引起的一种常见的水稻疾病，表现为叶片上的褐色病斑和花颈部变黑。",
+      plants: ["水稻"],
       treatments: [
         {
           method: "喷洒杀菌剂",
@@ -48,6 +56,7 @@ export const analyzePlantDisease = async (
     {
       name: "蚜虫",
       description: "蚜虫是一种常见的农作物害虫，会吸食植物汁液，导致叶片卷曲，生长缓慢，并传播病毒。",
+      plants: ["小麦", "玉米", "大豆", "棉花", "生菜", "白菜", "辣椒"],
       treatments: [
         {
           method: "生物防治",
@@ -82,6 +91,7 @@ export const analyzePlantDisease = async (
     {
       name: "霜霉病",
       description: "霜霉病是由真菌引起的疾病，在叶片表面形成白色或灰色的霉状物，严重时导致叶片枯死。",
+      plants: ["黄瓜", "茄子", "生菜", "葡萄", "番茄"],
       treatments: [
         {
           method: "预防措施",
@@ -116,6 +126,7 @@ export const analyzePlantDisease = async (
     {
       name: "锈病",
       description: "锈病是由锈菌引起的植物疾病，表现为叶片上出现黄褐色或红褐色的小点状病斑。",
+      plants: ["小麦", "大豆", "棉花", "苹果", "梨"],
       treatments: [
         {
           method: "轮作",
@@ -150,6 +161,7 @@ export const analyzePlantDisease = async (
     {
       name: "白粉病",
       description: "白粉病是由子囊菌引起的植物病害，表现为叶片、茎和花上出现白色粉状物，严重影响光合作用。",
+      plants: ["小麦", "黄瓜", "葡萄", "苹果", "茄子", "番茄"],
       treatments: [
         {
           method: "有机杀菌剂",
@@ -186,41 +198,63 @@ export const analyzePlantDisease = async (
   // Simulate analysis delay
   await new Promise(resolve => setTimeout(resolve, 2000));
   
-  // AI model enhanced selection based on mode
-  // Using environment data when available improves accuracy
-  let randomDiseaseIndex = 0;
+  // AI model enhanced selection based on mode and plant type
+  let selectedDisease;
   
-  if (mode === 'image-and-env' && envData) {
-    // In a real app, this would use a more sophisticated algorithm
-    // For now, we'll use a deterministic approach based on env data
+  if (plantType) {
+    // Find a disease that matches the plant type
+    const plantName = plantType;
+    const matchingDiseases = possibleDiseases.filter(disease => 
+      disease.plants.some(plant => 
+        plant === plantName || plantName.includes(plant) || plant.includes(plantName)
+      )
+    );
+    
+    if (matchingDiseases.length > 0) {
+      // Take a random disease from the matching ones
+      selectedDisease = matchingDiseases[Math.floor(Math.random() * matchingDiseases.length)];
+    } else {
+      // If no match, take a random disease
+      selectedDisease = possibleDiseases[Math.floor(Math.random() * possibleDiseases.length)];
+    }
+  } else if (mode === 'image-and-env' && envData) {
+    // If no plant type but we have env data, use that for improved accuracy
     const soilMoistureThreshold = 60;
     const soilPhThreshold = 6.5;
     
     if (envData.soilMoisture > soilMoistureThreshold && envData.soilPh < soilPhThreshold) {
       // High moisture and acidic soil often leads to fungal diseases
-      randomDiseaseIndex = 0; // 稻瘟病 (fungal disease)
+      selectedDisease = possibleDiseases[0]; // 稻瘟病 (fungal disease)
     } else if (envData.airTemperature > 25 && envData.airHumidity < 50) {
       // Hot and dry conditions often lead to insect pests
-      randomDiseaseIndex = 1; // 蚜虫 (aphids)
+      selectedDisease = possibleDiseases[1]; // 蚜虫 (aphids)
     } else if (envData.soilMoisture > soilMoistureThreshold && envData.airHumidity > 70) {
       // High moisture and humidity often leads to mildew diseases
-      randomDiseaseIndex = 2; // 霜霉病 (downy mildew)
+      selectedDisease = possibleDiseases[2]; // 霜霉病 (downy mildew)
     } else {
       // Other conditions
-      randomDiseaseIndex = Math.min(3 + Math.floor(Math.random() * 2), possibleDiseases.length - 1);
+      selectedDisease = possibleDiseases[Math.min(3 + Math.floor(Math.random() * 2), possibleDiseases.length - 1)];
     }
   } else {
-    // Image-only mode uses a more basic approach
-    randomDiseaseIndex = Math.floor(Math.random() * possibleDiseases.length);
+    // Image-only mode uses a simple approach
+    selectedDisease = possibleDiseases[Math.floor(Math.random() * possibleDiseases.length)];
   }
-  
-  const selectedDisease = possibleDiseases[randomDiseaseIndex];
   
   // Sort treatments by cost (lowest first)
   const sortedTreatments = [...selectedDisease.treatments].sort((a, b) => {
     const costOrder = { low: 1, medium: 2, high: 3 };
     return costOrder[a.cost as keyof typeof costOrder] - costOrder[b.cost as keyof typeof costOrder];
   });
+  
+  // If plant type is specified, automatically trigger a Baidu search for more information
+  const searchQuery = plantType 
+    ? `${plantType} ${selectedDisease.name} 防治方法`
+    : `${selectedDisease.name} 防治方法`;
+  
+  // Schedule a slightly delayed search to avoid popup blockers
+  setTimeout(() => {
+    openBaiduSearch(searchQuery);
+  }, 1000);
   
   // Generate result with 100% confidence
   return {
@@ -231,12 +265,11 @@ export const analyzePlantDisease = async (
   };
 };
 
-// Simulate calling an internet search API for treatment recommendations
-export const searchTreatments = async (
-  diseaseName: string
-): Promise<any> => {
-  console.log(`Searching treatments for: ${diseaseName}`);
-  // This would be implemented with a real search API in a production app
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  return null; // We're using mock data instead
+// Function to search for additional treatments on Baidu
+export const searchAdditionalTreatments = (diseaseName: string, plantType?: string) => {
+  const query = plantType 
+    ? `${plantType} ${diseaseName} 最佳防治方法`
+    : `${diseaseName} 最佳防治方法`;
+  
+  openBaiduSearch(query);
 };

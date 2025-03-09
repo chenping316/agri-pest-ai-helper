@@ -1,6 +1,5 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { AnalysisMode, BluetoothDevice, DiagnosisResult, EnvData, HistoryRecord, User } from "@/types";
+import { AnalysisMode, BluetoothDevice, DiagnosisResult, EnvData, HistoryRecord, User, PlantType } from "@/types";
 
 interface AppContextType {
   user: User | null;
@@ -25,12 +24,38 @@ interface AppContextType {
   setIsAnalyzing: (analyzing: boolean) => void;
   appReady: boolean;
   setAppReady: (ready: boolean) => void;
+  selectedPlantType: string | null;
+  setSelectedPlantType: (plantType: string | null) => void;
+  availablePlantTypes: PlantType[];
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 // Empty history array (no mock data)
 const emptyHistoryData: HistoryRecord[] = [];
+
+// Common plant types in China
+const commonPlantTypes: PlantType[] = [
+  { id: "rice", name: "水稻", category: "谷物" },
+  { id: "wheat", name: "小麦", category: "谷物" },
+  { id: "corn", name: "玉米", category: "谷物" },
+  { id: "soybean", name: "大豆", category: "豆类" },
+  { id: "cotton", name: "棉花", category: "经济作物" },
+  { id: "rapeseed", name: "油菜", category: "油料作物" },
+  { id: "potato", name: "马铃薯", category: "块茎类" },
+  { id: "sweetpotato", name: "红薯", category: "块茎类" },
+  { id: "tomato", name: "番茄", category: "蔬菜" },
+  { id: "cucumber", name: "黄瓜", category: "蔬菜" },
+  { id: "eggplant", name: "茄子", category: "蔬菜" },
+  { id: "pepper", name: "辣椒", category: "蔬菜" },
+  { id: "cabbage", name: "白菜", category: "蔬菜" },
+  { id: "lettuce", name: "生菜", category: "蔬菜" },
+  { id: "apple", name: "苹果", category: "水果" },
+  { id: "pear", name: "梨", category: "水果" },
+  { id: "orange", name: "橙子", category: "水果" },
+  { id: "grape", name: "葡萄", category: "水果" },
+  { id: "tea", name: "茶", category: "经济作物" }
+];
 
 export const AppProvider: React.FC<{children: ReactNode}> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -43,6 +68,8 @@ export const AppProvider: React.FC<{children: ReactNode}> = ({ children }) => {
   const [diagnosisResult, setDiagnosisResult] = useState<DiagnosisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [appReady, setAppReady] = useState(false);
+  const [selectedPlantType, setSelectedPlantType] = useState<string | null>(null);
+  const [availablePlantTypes] = useState<PlantType[]>(commonPlantTypes);
 
   // Check for saved login
   useEffect(() => {
@@ -168,7 +195,10 @@ export const AppProvider: React.FC<{children: ReactNode}> = ({ children }) => {
       isAnalyzing,
       setIsAnalyzing,
       appReady,
-      setAppReady
+      setAppReady,
+      selectedPlantType,
+      setSelectedPlantType,
+      availablePlantTypes
     }}>
       {children}
     </AppContext.Provider>

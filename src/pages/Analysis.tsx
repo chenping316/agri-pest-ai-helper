@@ -2,14 +2,15 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useAppContext } from "@/context/AppContext";
-import { Bug, Image, Loader2, Smartphone, Wifi, WifiOff } from "lucide-react";
+import { Bug, Image, Loader2, Smartphone, Wifi, WifiOff, ExternalLink, Search } from "lucide-react";
 import { Navigate } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import CameraComponent from "@/components/CameraComponent";
 import BluetoothSelector from "@/components/BluetoothSelector";
+import PlantTypeSelector from "@/components/PlantTypeSelector";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { analyzePlantDisease } from "@/utils/aiAnalysis";
+import { analyzePlantDisease, searchAdditionalTreatments } from "@/utils/aiAnalysis";
 import DiagnosisResult from "@/components/DiagnosisResult";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
@@ -27,7 +28,8 @@ const Analysis: React.FC = () => {
     setDiagnosisResult,
     isAnalyzing,
     setIsAnalyzing,
-    addToHistory
+    addToHistory,
+    selectedPlantType
   } = useAppContext();
   
   const [analysisProgress, setAnalysisProgress] = useState(0);
@@ -72,6 +74,7 @@ const Analysis: React.FC = () => {
       const result = await analyzePlantDisease(
         capturedImage,
         analysisMode,
+        selectedPlantType || undefined,
         envData || undefined
       );
       
@@ -80,6 +83,7 @@ const Analysis: React.FC = () => {
       // Add to history
       addToHistory({
         imageUrl: capturedImage,
+        plantType: selectedPlantType || undefined,
         envData: analysisMode === "image-and-env" ? envData || undefined : undefined,
         diagnosis: result
       });
@@ -105,6 +109,12 @@ const Analysis: React.FC = () => {
   const resetAnalysis = () => {
     setCapturedImage(null);
     setDiagnosisResult(null);
+  };
+
+  const handleSearchAdditionalInfo = () => {
+    if (diagnosisResult) {
+      searchAdditionalTreatments(diagnosisResult.name, selectedPlantType || undefined);
+    }
   };
 
   if (!isLoggedIn) {
@@ -180,11 +190,13 @@ const Analysis: React.FC = () => {
                 <CameraComponent onCapture={handleImageCapture} />
               </div>
               
-              {analysisMode === "image-and-env" && (
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border p-4">
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border p-4 space-y-4">
+                <PlantTypeSelector />
+                
+                {analysisMode === "image-and-env" && (
                   <BluetoothSelector />
-                </div>
-              )}
+                )}
+              </div>
             </div>
             
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border p-4">
@@ -201,9 +213,20 @@ const Analysis: React.FC = () => {
               ) : diagnosisResult ? (
                 <div className="space-y-4">
                   <DiagnosisResult result={diagnosisResult} />
-                  <Button onClick={resetAnalysis} variant="outline" className="w-full">
-                    重新分析
-                  </Button>
+                  
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <Button onClick={resetAnalysis} variant="outline" className="flex-1">
+                      重新分析
+                    </Button>
+                    <Button 
+                      onClick={handleSearchAdditionalInfo}
+                      variant="secondary"
+                      className="flex-1"
+                    >
+                      <Search className="h-4 w-4 mr-2" />
+                      百度搜索更多防治方法
+                    </Button>
+                  </div>
                 </div>
               ) : capturedImage ? (
                 <div className="flex flex-col items-center justify-center py-8">
@@ -241,6 +264,16 @@ const Analysis: React.FC = () => {
               </p>
             </div>
           )}
+          
+          <div className="mt-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+            <h3 className="text-blue-800 dark:text-blue-200 font-medium flex items-center gap-1 mb-1">
+              <ExternalLink className="h-4 w-4" />
+              网络搜索功能
+            </h3>
+            <p className="text-sm text-blue-700 dark:text-blue-300">
+              分析完成后，系统会自动通过百度搜索相关的防治方法。您也可以点击"百度搜索更多防治方法"获取更多详细信息。
+            </p>
+          </div>
         </div>
       </main>
     </div>
