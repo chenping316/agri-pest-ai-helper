@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useAppContext } from "@/context/AppContext";
@@ -223,14 +222,6 @@ const Analysis: React.FC = () => {
                     <Button onClick={resetAnalysis} variant="outline" className="flex-1">
                       重新分析
                     </Button>
-                    <Button 
-                      onClick={handleSearchAdditionalInfo}
-                      variant="secondary"
-                      className="flex-1"
-                    >
-                      <Search className="h-4 w-4 mr-2" />
-                      百度搜索更多防治方法
-                    </Button>
                   </div>
                 </div>
               ) : capturedImage ? (
@@ -273,10 +264,10 @@ const Analysis: React.FC = () => {
           <div className="mt-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
             <h3 className="text-blue-800 dark:text-blue-200 font-medium flex items-center gap-1 mb-1">
               <Search className="h-4 w-4" />
-              网络搜索功能
+              病虫害信息搜索功能
             </h3>
             <p className="text-sm text-blue-700 dark:text-blue-300">
-              分析完成后，您可以点击"百度搜索更多防治方法"获取详细的防治建议，所有搜索结果都会在应用内呈现。
+              分析完成后，您可以点击结果中的"查看详情"、"查看详细步骤"或"搜索更多防治方法"按钮获取更全面的信息和防治建议。
             </p>
           </div>
         </div>

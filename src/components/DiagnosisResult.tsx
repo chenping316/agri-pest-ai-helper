@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { DiagnosisResult as DiagnosisResultType } from "@/types";
-import { AlertTriangle, CheckCircle2, DollarSign, ZapIcon, ListChecks, Search } from "lucide-react";
+import { AlertTriangle, CheckCircle2, DollarSign, ZapIcon, ListChecks, Search, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { performInAppSearch } from "@/utils/aiAnalysis";
 import { cn } from "@/lib/utils";
@@ -50,13 +50,19 @@ const DiagnosisResult: React.FC<DiagnosisResultComponentProps> = ({
   };
 
   const handleSearchSymptoms = () => {
-    const query = `${result.name} 症状 图片`;
+    const query = `${result.name} 症状 特征 图片`;
     setSearchQuery(query);
     setSearchDialogOpen(true);
   };
 
   const handleSearchTreatment = (treatment: string) => {
-    const query = `${result.name} ${treatment} 详细步骤`;
+    const query = `${result.name} ${treatment} 详细步骤 使用方法`;
+    setSearchQuery(query);
+    setSearchDialogOpen(true);
+  };
+
+  const handleSearchDisease = () => {
+    const query = `${result.name} 防治方法 最新技术`;
     setSearchQuery(query);
     setSearchDialogOpen(true);
   };
@@ -67,7 +73,17 @@ const DiagnosisResult: React.FC<DiagnosisResultComponentProps> = ({
         <CardHeader className="p-4 sm:p-6">
           <div className="flex justify-between items-start">
             <div>
-              <CardTitle className="text-lg sm:text-xl">{result.name}</CardTitle>
+              <CardTitle className="text-lg sm:text-xl flex items-center">
+                {result.name}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 ml-1 text-muted-foreground hover:text-primary"
+                  onClick={handleSearchDisease}
+                >
+                  <Info className="h-4 w-4" />
+                </Button>
+              </CardTitle>
               <CardDescription>诊断结果</CardDescription>
             </div>
             <div className="flex items-center">
@@ -93,7 +109,7 @@ const DiagnosisResult: React.FC<DiagnosisResultComponentProps> = ({
                 onClick={handleSearchSymptoms}
               >
                 <Search className="h-3 w-3 mr-1" />
-                百度搜索
+                查看详情
               </Button>
             </div>
             <p className="text-xs sm:text-sm text-muted-foreground">{result.description}</p>
@@ -137,7 +153,7 @@ const DiagnosisResult: React.FC<DiagnosisResultComponentProps> = ({
                       onClick={() => handleSearchTreatment(treatment.method)}
                     >
                       <Search className="h-2 w-2 sm:h-3 sm:w-3 mr-1" />
-                      搜索详细步骤
+                      查看详细步骤
                     </Button>
                   </div>
                 </div>
@@ -146,7 +162,15 @@ const DiagnosisResult: React.FC<DiagnosisResultComponentProps> = ({
           </div>
         </CardContent>
         <CardFooter className="text-[10px] sm:text-xs text-muted-foreground justify-center p-3 sm:p-4">
-          诊断结果仅供参考，建议结合实际情况采取相应措施
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="text-xs"
+            onClick={handleSearchDisease}
+          >
+            <Search className="h-3 w-3 mr-1" />
+            搜索更多防治方法
+          </Button>
         </CardFooter>
       </Card>
       
