@@ -6,6 +6,11 @@ export const openBaiduSearch = (query: string) => {
   window.open(`https://www.baidu.com/s?wd=${encodedQuery}`, '_blank');
 };
 
+// Function to search within the app (returns the query string)
+export const performInAppSearch = (query: string): string => {
+  return query;
+};
+
 // Mock API for diagnosing plant diseases
 export const analyzePlantDisease = async (
   imageBase64: string,
@@ -246,16 +251,6 @@ export const analyzePlantDisease = async (
     return costOrder[a.cost as keyof typeof costOrder] - costOrder[b.cost as keyof typeof costOrder];
   });
   
-  // If plant type is specified, automatically trigger a Baidu search for more information
-  const searchQuery = plantType 
-    ? `${plantType} ${selectedDisease.name} 防治方法`
-    : `${selectedDisease.name} 防治方法`;
-  
-  // Schedule a slightly delayed search to avoid popup blockers
-  setTimeout(() => {
-    openBaiduSearch(searchQuery);
-  }, 1000);
-  
   // Generate result with 100% confidence
   return {
     name: selectedDisease.name,
@@ -265,11 +260,11 @@ export const analyzePlantDisease = async (
   };
 };
 
-// Function to search for additional treatments on Baidu
-export const searchAdditionalTreatments = (diseaseName: string, plantType?: string) => {
+// Function to search for additional treatments
+export const searchAdditionalTreatments = (diseaseName: string, plantType?: string): string => {
   const query = plantType 
     ? `${plantType} ${diseaseName} 最佳防治方法`
     : `${diseaseName} 最佳防治方法`;
   
-  openBaiduSearch(query);
+  return query;
 };

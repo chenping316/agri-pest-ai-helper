@@ -44,6 +44,9 @@ const PlantTypeSelector: React.FC = () => {
     setCustomPlantType("");
   };
 
+  // Group plant types by category
+  const categories = Array.from(new Set(availablePlantTypes.map(type => type.category)));
+
   return (
     <div className="space-y-2">
       <h3 className="text-sm font-medium">植物种类</h3>
@@ -86,15 +89,13 @@ const PlantTypeSelector: React.FC = () => {
               <CommandList>
                 <CommandEmpty>未找到植物种类</CommandEmpty>
                 <ScrollArea className="h-[300px]">
-                  {availablePlantTypes.reduce<React.ReactNode[]>((acc, category) => {
-                    const categoryItems = availablePlantTypes
-                      .filter(type => type.category === category.category);
+                  {categories.map(category => {
+                    const categoryItems = availablePlantTypes.filter(type => type.category === category);
                     
-                    if (categoryItems.length === 0) return acc;
+                    if (categoryItems.length === 0) return null;
                     
-                    return [
-                      ...acc,
-                      <CommandGroup key={category.category} heading={category.category}>
+                    return (
+                      <CommandGroup key={`category-${category}`} heading={category}>
                         {categoryItems.map(type => (
                           <CommandItem
                             key={type.id}
@@ -111,8 +112,8 @@ const PlantTypeSelector: React.FC = () => {
                           </CommandItem>
                         ))}
                       </CommandGroup>
-                    ];
-                  }, [])}
+                    );
+                  })}
                   <CommandGroup heading="其他">
                     <CommandItem value="custom" onSelect={() => handleSelectPlantType("custom")}>
                       <Search className="mr-2 h-4 w-4" />

@@ -10,10 +10,11 @@ import BluetoothSelector from "@/components/BluetoothSelector";
 import PlantTypeSelector from "@/components/PlantTypeSelector";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { analyzePlantDisease, searchAdditionalTreatments } from "@/utils/aiAnalysis";
+import { analyzePlantDisease, performInAppSearch } from "@/utils/aiAnalysis";
 import DiagnosisResult from "@/components/DiagnosisResult";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
+import SearchResults from "@/components/SearchResults";
 
 const Analysis: React.FC = () => {
   const { 
@@ -33,6 +34,8 @@ const Analysis: React.FC = () => {
   } = useAppContext();
   
   const [analysisProgress, setAnalysisProgress] = useState(0);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchDialogOpen, setSearchDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const handleImageCapture = (imageUrl: string) => {
@@ -113,7 +116,9 @@ const Analysis: React.FC = () => {
 
   const handleSearchAdditionalInfo = () => {
     if (diagnosisResult) {
-      searchAdditionalTreatments(diagnosisResult.name, selectedPlantType || undefined);
+      const query = performInAppSearch(`${diagnosisResult.name} ${selectedPlantType || ''} 防治方法`);
+      setSearchQuery(query);
+      setSearchDialogOpen(true);
     }
   };
 
@@ -267,15 +272,21 @@ const Analysis: React.FC = () => {
           
           <div className="mt-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
             <h3 className="text-blue-800 dark:text-blue-200 font-medium flex items-center gap-1 mb-1">
-              <ExternalLink className="h-4 w-4" />
+              <Search className="h-4 w-4" />
               网络搜索功能
             </h3>
             <p className="text-sm text-blue-700 dark:text-blue-300">
-              分析完成后，系统会自动通过百度搜索相关的防治方法。您也可以点击"百度搜索更多防治方法"获取更多详细信息。
+              分析完成后，您可以点击"百度搜索更多防治方法"获取详细的防治建议，所有搜索结果都会在应用内呈现。
             </p>
           </div>
         </div>
       </main>
+      
+      <SearchResults 
+        query={searchQuery}
+        open={searchDialogOpen}
+        onOpenChange={setSearchDialogOpen}
+      />
     </div>
   );
 };
