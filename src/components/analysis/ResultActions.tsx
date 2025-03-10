@@ -1,9 +1,9 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { Repeat, Search } from "lucide-react";
+import { ExternalLink, Repeat, Search } from "lucide-react";
 import { DiagnosisResult } from "@/types";
-import { openBaiduSearch } from "@/utils/aiAnalysis";
+import { openBaiduSearch, searchAdditionalTreatments } from "@/utils/aiAnalysis";
 
 interface ResultActionsProps {
   resetAnalysis: () => void;
@@ -18,7 +18,12 @@ const ResultActions: React.FC<ResultActionsProps> = ({
   const isNetworkError = diagnosisResult && diagnosisResult.confidence <= 0.05;
   
   const handleSearchHelp = () => {
-    openBaiduSearch("localhost API 连接问题 Node.js Express");
+    if (isNetworkError) {
+      openBaiduSearch("Taichu-VL API 连接问题");
+    } else if (diagnosisResult) {
+      const query = searchAdditionalTreatments(diagnosisResult.name);
+      openBaiduSearch(query);
+    }
   };
 
   return (
@@ -28,10 +33,15 @@ const ResultActions: React.FC<ResultActionsProps> = ({
         重新分析
       </Button>
       
-      {isNetworkError && (
+      {isNetworkError ? (
         <Button onClick={handleSearchHelp} variant="secondary" className="flex-1">
           <Search className="w-4 h-4 mr-2" />
           搜索连接问题
+        </Button>
+      ) : diagnosisResult && (
+        <Button onClick={handleSearchHelp} variant="secondary" className="flex-1">
+          <ExternalLink className="w-4 h-4 mr-2" />
+          搜索更多治疗方法
         </Button>
       )}
     </div>

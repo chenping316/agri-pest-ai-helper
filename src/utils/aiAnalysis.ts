@@ -40,8 +40,8 @@ export const analyzePlantDisease = async (
 // Function to search for additional treatments
 export const searchAdditionalTreatments = (diseaseName: string, plantType?: string): string => {
   const query = plantType 
-    ? `${plantType} ${diseaseName} 最佳防治方法`
-    : `${diseaseName} 最佳防治方法`;
+    ? `${plantType} ${diseaseName} 治疗方法 Taichu-VL`
+    : `${diseaseName} 治疗方法 Taichu-VL`;
   
   return query;
 };

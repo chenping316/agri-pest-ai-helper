@@ -1,17 +1,17 @@
 
 /**
- * API client for plant image and data analysis
+ * API client for plant image and data analysis using Taichu-VL model
  */
 
 import { DiagnosisResult, EnvData } from "@/types";
-import { useToast } from "@/hooks/use-toast";
 
 // API constants
-const API_URL = "http://localhost:3001/api";
-const API_KEY = "brx-FFTVDM5-32VMP8D-GRTTJAD-TMZ8CEA";
+const API_URL = "https://platform.wair.ac.cn/maas/v1/chat/completions";
+const API_KEY = "3lo5ej5dwl7vivm95l36oljo";
+const API_KEY_ID = "33787015";
 
 /**
- * Analyze plant image with API
+ * Analyze plant image with Taichu-VL API
  * @param imageBase64 Base64 encoded image
  * @param plantType Optional plant type for more accurate results
  * @param envData Optional environmental data
@@ -23,37 +23,64 @@ export async function analyzeImageWithZhipu(
   envData?: EnvData
 ): Promise<DiagnosisResult> {
   try {
-    console.log("Preparing request to local API...");
+    console.log("Preparing request to Taichu-VL API...");
     
     // Remove data URL prefix if present
     const base64Image = imageBase64.includes("base64,") 
       ? imageBase64.split("base64,")[1] 
       : imageBase64;
     
-    // Prepare environment data for API request
-    const envDataPayload = envData ? {
-      soilMoisture: envData.soilMoisture,
-      soilTemperature: envData.soilTemperature,
-      soilPh: envData.soilPh,
-      airTemperature: envData.airTemperature,
-      airHumidity: envData.airHumidity
-    } : null;
+    // Prepare environment data string
+    let envDataString = "";
+    if (envData) {
+      envDataString = `
+环境数据:
+- 土壤湿度: ${envData.soilMoisture}%
+- 土壤温度: ${envData.soilTemperature}°C
+- 土壤pH值: ${envData.soilPh}
+- 空气温度: ${envData.airTemperature}°C
+- 空气湿度: ${envData.airHumidity}%`;
+    }
     
-    // Prepare request payload
+    // Create prompt for the model
+    const plantTypeInfo = plantType ? `植物类型: ${plantType}` : "植物类型: 未知";
+    const systemPrompt = "你是一个专业的植物病害诊断助手，可以根据图片识别植物病害并提供治疗方案。";
+    const userPrompt = `请分析这张植物图片，诊断可能的病害。
+${plantTypeInfo}
+${envDataString}
+
+请按以下格式回复:
+1. 病害名称
+2. 病害描述
+3. 置信度(0-1之间的数值)
+4. 治疗方案(包括方法、成本级别(低/中/高)、有效性级别(低/中/高)、估计价格、详细描述)`;
+
+    // Prepare request payload for Taichu-VL model
     const payload = {
-      imageData: base64Image,
-      plantType: plantType || "unknown",
-      environmentData: envDataPayload
+      model: "Taichu-VL",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { 
+          role: "user", 
+          content: [
+            { type: "text", text: userPrompt },
+            { type: "image_url", image_url: { url: `data:image/jpeg;base64,${base64Image}` } }
+          ]
+        }
+      ],
+      temperature: 0.7,
+      max_tokens: 1000
     };
     
-    console.log("Sending request to local API...");
+    console.log("Sending request to Taichu-VL API...");
     
     // Make API request
     const response = await fetch(API_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${API_KEY}`
+        "Authorization": `Bearer ${API_KEY}`,
+        "X-MaaS-Key-Id": API_KEY_ID
       },
       body: JSON.stringify(payload)
     });
@@ -66,32 +93,130 @@ export async function analyzeImageWithZhipu(
     const jsonResponse = await response.json();
     console.log("Received response from API:", jsonResponse);
     
-    // Validate the response
-    if (!jsonResponse || !jsonResponse.name) {
-      console.error("Invalid API response format:", jsonResponse);
-      return createFallbackResult(plantType, true);
-    }
+    // Extract the text response
+    const responseText = jsonResponse.choices?.[0]?.message?.content || "";
+    console.log("Response text:", responseText);
     
-    // Format and return the diagnosis result
-    return {
-      name: jsonResponse.name,
-      description: jsonResponse.description || "",
-      confidence: jsonResponse.confidence || 0.85,
-      treatments: Array.isArray(jsonResponse.treatments) 
-        ? jsonResponse.treatments.map((treatment: any) => ({
-            method: treatment.method,
-            cost: treatment.cost || "medium",
-            effectiveness: treatment.effectiveness || "medium",
-            estimatedPrice: treatment.estimatedPrice || "¥50-100/亩",
-            description: treatment.description || ""
-          }))
-        : createFallbackResult(plantType).treatments
-    };
+    // Parse the response text into structured data
+    return parseResponseToResult(responseText, plantType);
   } catch (error) {
-    console.error("Error calling local API:", error);
+    console.error("Error calling Taichu-VL API:", error);
     
     // Return fallback data in case of API failure
     return createFallbackResult(plantType, true);
+  }
+}
+
+/**
+ * Parse the text response from the Taichu-VL API into structured data
+ */
+function parseResponseToResult(responseText: string, plantType?: string): DiagnosisResult {
+  try {
+    // Extract disease name (typically after "病害名称:" or numbered as "1.")
+    const nameMatch = responseText.match(/病害名称[:：]\s*(.+?)(?:\n|$)/) || 
+                      responseText.match(/1\.\s*(.+?)(?:\n|$)/);
+    const name = nameMatch ? nameMatch[1].trim() : "未知病害";
+    
+    // Extract description
+    const descMatch = responseText.match(/病害描述[:：]\s*([\s\S]+?)(?=\n\d\.|\n置信度|\n治疗方案|$)/) ||
+                      responseText.match(/2\.\s*([\s\S]+?)(?=\n\d\.|\n置信度|\n治疗方案|$)/);
+    const description = descMatch ? descMatch[1].trim() : "无描述";
+    
+    // Extract confidence
+    const confMatch = responseText.match(/置信度[:：]\s*(0\.\d+|1\.0|1)/) ||
+                      responseText.match(/3\.\s*(0\.\d+|1\.0|1)/);
+    const confidence = confMatch ? parseFloat(confMatch[1]) : 0.7;
+    
+    // Extract treatments
+    const treatments = [];
+    
+    // Try to find treatment section
+    const treatmentSection = responseText.match(/治疗方案[:：]\s*([\s\S]+)$/) ||
+                            responseText.match(/4\.\s*([\s\S]+)$/) ||
+                            responseText.match(/治疗方法[:：]\s*([\s\S]+)$/) ||
+                            { index: responseText.indexOf("治疗"), 1: responseText.substring(responseText.indexOf("治疗")) };
+    
+    if (treatmentSection && treatmentSection[1]) {
+      const treatmentText = treatmentSection[1];
+      
+      // Try to find numbered methods or separate by paragraphs
+      const methodMatches = treatmentText.match(/(\d+)[\.、]([^（(]*)[（(]([^)）]*)[)）]([^0-9\n]*)/g) ||
+                           treatmentText.split(/\n\s*\n/);
+      
+      if (methodMatches && methodMatches.length > 0) {
+        for (const methodMatch of methodMatches) {
+          // Extract components
+          const methodNameMatch = methodMatch.match(/方法[:：]\s*(.+?)(?:\n|$)/) || 
+                                { 1: methodMatch.includes("：") ? methodMatch.split("：")[0].trim() : methodMatch.split("\n")[0].trim() };
+          
+          const costMatch = methodMatch.match(/成本[:：]\s*(低|中|高)/) ||
+                           methodMatch.match(/(低|中|高)\s*成本/);
+          
+          const effectMatch = methodMatch.match(/有效性[:：]\s*(低|中|高)/) ||
+                             methodMatch.match(/(低|中|高)\s*有效/) ||
+                             methodMatch.match(/效果[:：]\s*(低|中|高)/);
+          
+          const priceMatch = methodMatch.match(/价格[:：]\s*([^\/\n]+\/[^\n]+)/) ||
+                            methodMatch.match(/([¥￥]\d+[\-～至]\d+\/[亩次株]+)/);
+          
+          const descMatch = methodMatch.match(/描述[:：]\s*(.+)/) ||
+                           { 1: methodMatch.includes("：") && methodMatch.split("：").length > 1 ? 
+                              methodMatch.split("：").slice(1).join("：").trim() : 
+                              methodMatch.split("\n").slice(1).join("\n").trim() };
+          
+          treatments.push({
+            method: methodNameMatch[1] || "喷洒杀菌剂",
+            cost: (costMatch ? costMatch[1] : "medium") as "low" | "medium" | "high",
+            effectiveness: (effectMatch ? effectMatch[1] : "medium") as "low" | "medium" | "high",
+            estimatedPrice: priceMatch ? priceMatch[1] : "¥50-100/亩",
+            description: descMatch[1] || "对病害进行治疗"
+          });
+          
+          // Limit to 4 treatments
+          if (treatments.length >= 4) break;
+        }
+      }
+    }
+    
+    // If no treatments found, add at least one generic treatment
+    if (treatments.length === 0) {
+      treatments.push({
+        method: "喷洒杀菌剂",
+        cost: "medium",
+        effectiveness: "high",
+        estimatedPrice: "¥40-60/亩",
+        description: "使用专业杀菌剂喷洒，每7-10天一次，连续2-3次。"
+      });
+    }
+    
+    // Ensure we have 4 treatments for UI consistency
+    while (treatments.length < 4) {
+      const methods = ["农业措施", "生物防治", "抗病品种", "物理防治"];
+      const descriptions = [
+        "保持田间通风，适当控制氮肥使用量，增施钾肥。",
+        "使用拮抗微生物制剂，抑制病菌生长。",
+        "选用抗病品种，可显著减少病害发生。",
+        "适当修剪病叶，及时清理病残体，减少传染源。"
+      ];
+      
+      treatments.push({
+        method: methods[treatments.length % methods.length],
+        cost: "medium",
+        effectiveness: "medium",
+        estimatedPrice: "¥30-50/亩",
+        description: descriptions[treatments.length % descriptions.length]
+      });
+    }
+    
+    return {
+      name,
+      description,
+      confidence,
+      treatments: treatments.slice(0, 4) // Limit to 4 treatments
+    };
+  } catch (error) {
+    console.error("Error parsing API response:", error);
+    return createFallbackResult(plantType);
   }
 }
 
@@ -137,7 +262,7 @@ function createFallbackResult(plantType?: string, isFallback: boolean = false): 
         cost: "low",
         effectiveness: "medium",
         estimatedPrice: "¥0-20/亩",
-        description: isFallback ? "确认本地API服务器正在运行并可访问" : "保持田间通风，适当控制氮肥使用量，增施钾肥。"
+        description: isFallback ? "确认API密钥和密钥ID是否正确" : "保持田间通风，适当控制氮肥使用量，增施钾肥。"
       },
       {
         method: isFallback ? "使用较小图片" : "生物防治",
