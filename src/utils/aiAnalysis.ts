@@ -13,7 +13,7 @@ export const performInAppSearch = (query: string): string => {
   return query;
 };
 
-// Function to analyze plant diseases using Zhipu API
+// Function to analyze plant diseases using API
 export const analyzePlantDisease = async (
   imageBase64: string,
   mode: AnalysisMode,
@@ -23,7 +23,7 @@ export const analyzePlantDisease = async (
   console.log(`Analyzing image with mode: ${mode}, plant type: ${plantType || 'not specified'}`);
   
   try {
-    // Use the Zhipu API client to analyze the image
+    // Use the API client to analyze the image
     const result = await analyzeImageWithZhipu(
       imageBase64,
       plantType,

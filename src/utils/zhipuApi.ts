@@ -1,19 +1,17 @@
 
 /**
- * Zhipu Qingyan API client for image and data analysis
+ * API client for plant image and data analysis
  */
 
 import { DiagnosisResult, EnvData } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 
 // API constants
-const API_URL = "https://chatglm.cn/chatglm/assistant-api/v1/";
-const API_KEY = "79efc8b59478d8f6";
-const API_SECRET = "cf7c3fe9b8f6f9d0b2abbcdd57346d71";
-const API_NAME = "nyai";
+const API_URL = "http://localhost:3001/api";
+const API_KEY = "brx-FFTVDM5-32VMP8D-GRTTJAD-TMZ8CEA";
 
 /**
- * Analyze plant image with Zhipu Qingyan API
+ * Analyze plant image with API
  * @param imageBase64 Base64 encoded image
  * @param plantType Optional plant type for more accurate results
  * @param envData Optional environmental data
@@ -25,82 +23,37 @@ export async function analyzeImageWithZhipu(
   envData?: EnvData
 ): Promise<DiagnosisResult> {
   try {
-    console.log("Preparing request to Zhipu API...");
+    console.log("Preparing request to local API...");
     
     // Remove data URL prefix if present
     const base64Image = imageBase64.includes("base64,") 
       ? imageBase64.split("base64,")[1] 
       : imageBase64;
     
-    // Prepare environment data string if available
-    let envDataString = "";
-    if (envData) {
-      envDataString = `
-环境数据:
-- 土壤湿度: ${envData.soilMoisture}%
-- 土壤温度: ${envData.soilTemperature}°C
-- 土壤pH值: ${envData.soilPh}
-- 空气温度: ${envData.airTemperature}°C
-- 空气湿度: ${envData.airHumidity}%
-      `;
-    }
+    // Prepare environment data for API request
+    const envDataPayload = envData ? {
+      soilMoisture: envData.soilMoisture,
+      soilTemperature: envData.soilTemperature,
+      soilPh: envData.soilPh,
+      airTemperature: envData.airTemperature,
+      airHumidity: envData.airHumidity
+    } : null;
     
     // Prepare request payload
     const payload = {
-      model: API_NAME,
-      messages: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "text",
-              text: `我需要你帮我分析这张植物照片中的病虫害情况。${plantType ? `这是${plantType}植物。` : ""}${envDataString ? `\n${envDataString}` : ""}请给出详细的分析结果，包括:
-1. 病虫害名称
-2. 病虫害描述
-3. 诊断可信度(0-1之间的小数)
-4. 推荐处理方法(至少4种)，每种方法包括:
-   - 方法名称
-   - 成本(low/medium/high)
-   - 有效性(low/medium/high)
-   - 预估费用(人民币)
-   - 详细描述
-
-请以JSON格式回复，格式如下:
-{
-  "name": "病虫害名称",
-  "description": "病虫害描述",
-  "confidence": 0.95,
-  "treatments": [
-    {
-      "method": "处理方法1",
-      "cost": "low",
-      "effectiveness": "high",
-      "estimatedPrice": "¥30-50/亩",
-      "description": "处理方法1的详细描述"
-    },
-    ...
-  ]
-}`
-            },
-            {
-              type: "image",
-              image_url: {
-                url: `data:image/jpeg;base64,${base64Image}`
-              }
-            }
-          ]
-        }
-      ]
+      imageData: base64Image,
+      plantType: plantType || "unknown",
+      environmentData: envDataPayload
     };
     
-    console.log("Sending request to Zhipu API...");
+    console.log("Sending request to local API...");
     
     // Make API request
     const response = await fetch(API_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${API_KEY}:${API_SECRET}`
+        "Authorization": `Bearer ${API_KEY}`
       },
       body: JSON.stringify(payload)
     });
@@ -110,54 +63,32 @@ export async function analyzeImageWithZhipu(
       throw new Error(`API request failed: ${response.status} - ${errorText}`);
     }
     
-    const responseData = await response.json();
-    console.log("Received response from Zhipu API:", responseData);
+    const jsonResponse = await response.json();
+    console.log("Received response from API:", jsonResponse);
     
-    // Extract the JSON response from the text (it might be embedded in markdown or plain text)
-    let jsonResponse;
-    try {
-      // Try to extract JSON from the response content
-      const contentText = responseData.choices[0].message.content;
-      const jsonMatch = contentText.match(/\{[\s\S]*\}/);
-      
-      if (jsonMatch) {
-        jsonResponse = JSON.parse(jsonMatch[0]);
-      } else {
-        throw new Error("No JSON found in response");
-      }
-    } catch (parseError) {
-      console.error("Failed to parse API response as JSON:", parseError);
-      
-      // Fallback to mock data if parsing fails
-      return createFallbackResult(plantType, true);
-    }
-    
-    // Validate and format the response
-    if (!jsonResponse || !jsonResponse.name || !Array.isArray(jsonResponse.treatments)) {
+    // Validate the response
+    if (!jsonResponse || !jsonResponse.name) {
       console.error("Invalid API response format:", jsonResponse);
       return createFallbackResult(plantType, true);
     }
     
-    // Ensure confidence is a number between 0 and 1
-    const confidence = typeof jsonResponse.confidence === 'number' 
-      ? Math.max(0, Math.min(1, jsonResponse.confidence))
-      : 0.85;
-    
     // Format and return the diagnosis result
     return {
       name: jsonResponse.name,
-      description: jsonResponse.description,
-      confidence: confidence,
-      treatments: jsonResponse.treatments.map((treatment: any) => ({
-        method: treatment.method,
-        cost: treatment.cost || "medium",
-        effectiveness: treatment.effectiveness || "medium",
-        estimatedPrice: treatment.estimatedPrice || "¥50-100/亩",
-        description: treatment.description
-      }))
+      description: jsonResponse.description || "",
+      confidence: jsonResponse.confidence || 0.85,
+      treatments: Array.isArray(jsonResponse.treatments) 
+        ? jsonResponse.treatments.map((treatment: any) => ({
+            method: treatment.method,
+            cost: treatment.cost || "medium",
+            effectiveness: treatment.effectiveness || "medium",
+            estimatedPrice: treatment.estimatedPrice || "¥50-100/亩",
+            description: treatment.description || ""
+          }))
+        : createFallbackResult(plantType).treatments
     };
   } catch (error) {
-    console.error("Error calling Zhipu API:", error);
+    console.error("Error calling local API:", error);
     
     // Return fallback data in case of API failure
     return createFallbackResult(plantType, true);
@@ -173,7 +104,7 @@ function createFallbackResult(plantType?: string, isFallback: boolean = false): 
   // Select a common disease based on plant type if available
   let diseaseName = isFallback ? "网络连接错误 - 无法分析图片" : "叶斑病";
   let description = isFallback 
-    ? "无法连接到智谱清言API分析图片。请检查网络连接后重试，或尝试使用其他图片。以下是示例结果。" 
+    ? "无法连接到API进行图片分析。请检查网络连接后重试，或尝试使用其他图片。以下是示例结果。" 
     : "叶斑病是一种常见的植物疾病，表现为叶片上出现不规则的褐色或黑色斑点。";
   
   if (plantType && !isFallback) {
@@ -202,11 +133,11 @@ function createFallbackResult(plantType?: string, isFallback: boolean = false): 
         description: isFallback ? "检查网络连接并重试分析" : "使用专业杀菌剂喷洒，每7-10天一次，连续2-3次。"
       },
       {
-        method: isFallback ? "更换WiFi网络" : "农业措施",
+        method: isFallback ? "检查API配置" : "农业措施",
         cost: "low",
         effectiveness: "medium",
         estimatedPrice: "¥0-20/亩",
-        description: isFallback ? "尝试切换到更稳定的网络连接" : "保持田间通风，适当控制氮肥使用量，增施钾肥。"
+        description: isFallback ? "确认本地API服务器正在运行并可访问" : "保持田间通风，适当控制氮肥使用量，增施钾肥。"
       },
       {
         method: isFallback ? "使用较小图片" : "生物防治",

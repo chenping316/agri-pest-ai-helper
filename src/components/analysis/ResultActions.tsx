@@ -18,7 +18,7 @@ const ResultActions: React.FC<ResultActionsProps> = ({
   const isNetworkError = diagnosisResult && diagnosisResult.confidence <= 0.05;
   
   const handleSearchHelp = () => {
-    openBaiduSearch("智谱清言API 连接问题 解决方法");
+    openBaiduSearch("localhost API 连接问题 Node.js Express");
   };
 
   return (
