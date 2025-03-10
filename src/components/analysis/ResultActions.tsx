@@ -3,7 +3,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { ExternalLink, Repeat, Search } from "lucide-react";
 import { DiagnosisResult } from "@/types";
-import { openBaiduSearch, searchAdditionalTreatments } from "@/utils/aiAnalysis";
+import { openBaiduSearch, searchAdditionalTreatments, searchConnectionIssues } from "@/utils/searchUtils";
 
 interface ResultActionsProps {
   resetAnalysis: () => void;
@@ -19,7 +19,7 @@ const ResultActions: React.FC<ResultActionsProps> = ({
   
   const handleSearchHelp = () => {
     if (isNetworkError) {
-      openBaiduSearch("Taichu-VL API 连接问题");
+      openBaiduSearch(searchConnectionIssues());
     } else if (diagnosisResult) {
       const query = searchAdditionalTreatments(
         diagnosisResult.name, 

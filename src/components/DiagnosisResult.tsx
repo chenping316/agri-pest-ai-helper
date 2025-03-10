@@ -1,11 +1,10 @@
-
 import React, { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { DiagnosisResult as DiagnosisResultType } from "@/types";
 import { AlertTriangle, CheckCircle2, DollarSign, ZapIcon, ListChecks, Search, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { performInAppSearch } from "@/utils/aiAnalysis";
+import { searchSymptoms, searchTreatmentMethod, searchDiseaseInfo } from "@/utils/searchUtils";
 import { cn } from "@/lib/utils";
 import SearchResults from "./SearchResults";
 
@@ -50,19 +49,19 @@ const DiagnosisResult: React.FC<DiagnosisResultComponentProps> = ({
   };
 
   const handleSearchSymptoms = () => {
-    const query = `${result.name} 症状 特征 图片`;
+    const query = searchSymptoms(result.name);
     setSearchQuery(query);
     setSearchDialogOpen(true);
   };
 
   const handleSearchTreatment = (treatment: string) => {
-    const query = `${result.name} ${treatment} 详细步骤 使用方法`;
+    const query = searchTreatmentMethod(result.name, treatment);
     setSearchQuery(query);
     setSearchDialogOpen(true);
   };
 
   const handleSearchDisease = () => {
-    const query = `${result.name} 防治方法 最新技术`;
+    const query = searchDiseaseInfo(result.name);
     setSearchQuery(query);
     setSearchDialogOpen(true);
   };
