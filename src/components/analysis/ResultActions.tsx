@@ -21,7 +21,10 @@ const ResultActions: React.FC<ResultActionsProps> = ({
     if (isNetworkError) {
       openBaiduSearch("Taichu-VL API 连接问题");
     } else if (diagnosisResult) {
-      const query = searchAdditionalTreatments(diagnosisResult.name);
+      const query = searchAdditionalTreatments(
+        diagnosisResult.name, 
+        // Adding plantType if available in the future
+      );
       openBaiduSearch(query);
     }
   };

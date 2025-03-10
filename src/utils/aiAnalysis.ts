@@ -1,6 +1,6 @@
 
 import { AnalysisMode, DiagnosisResult, EnvData } from "@/types";
-import { analyzeImageWithZhipu } from "./zhipuApi";
+import { analyzePlantDisease as apiAnalyzePlantDisease } from "@/api/taichuVL/plantAnalysis";
 
 // Function to open Baidu search in a new tab
 export const openBaiduSearch = (query: string) => {
@@ -23,8 +23,8 @@ export const analyzePlantDisease = async (
   console.log(`Analyzing image with mode: ${mode}, plant type: ${plantType || 'not specified'}`);
   
   try {
-    // Use the API client to analyze the image
-    const result = await analyzeImageWithZhipu(
+    // Call the API client to analyze the image
+    const result = await apiAnalyzePlantDisease(
       imageBase64,
       plantType,
       mode === 'image-and-env' ? envData : undefined
