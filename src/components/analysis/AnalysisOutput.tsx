@@ -32,7 +32,7 @@ const AnalysisOutput: React.FC<AnalysisOutputProps> = ({
       ) : diagnosisResult ? (
         <div className="space-y-4">
           <DiagnosisResult result={diagnosisResult} />
-          <ResultActions resetAnalysis={resetAnalysis} />
+          <ResultActions resetAnalysis={resetAnalysis} diagnosisResult={diagnosisResult} />
         </div>
       ) : (
         <ImagePreview

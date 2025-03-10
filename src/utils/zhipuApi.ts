@@ -4,6 +4,7 @@
  */
 
 import { DiagnosisResult, EnvData } from "@/types";
+import { useToast } from "@/hooks/use-toast";
 
 // API constants
 const API_URL = "https://chatglm.cn/chatglm/assistant-api/v1/";
@@ -128,13 +129,13 @@ export async function analyzeImageWithZhipu(
       console.error("Failed to parse API response as JSON:", parseError);
       
       // Fallback to mock data if parsing fails
-      return createFallbackResult(plantType);
+      return createFallbackResult(plantType, true);
     }
     
     // Validate and format the response
     if (!jsonResponse || !jsonResponse.name || !Array.isArray(jsonResponse.treatments)) {
       console.error("Invalid API response format:", jsonResponse);
-      return createFallbackResult(plantType);
+      return createFallbackResult(plantType, true);
     }
     
     // Ensure confidence is a number between 0 and 1
@@ -159,21 +160,23 @@ export async function analyzeImageWithZhipu(
     console.error("Error calling Zhipu API:", error);
     
     // Return fallback data in case of API failure
-    return createFallbackResult(plantType);
+    return createFallbackResult(plantType, true);
   }
 }
 
 /**
  * Create fallback diagnosis result if API call fails
  */
-function createFallbackResult(plantType?: string): DiagnosisResult {
+function createFallbackResult(plantType?: string, isFallback: boolean = false): DiagnosisResult {
   console.log("Using fallback diagnosis result");
   
   // Select a common disease based on plant type if available
-  let diseaseName = "叶斑病";
-  let description = "叶斑病是一种常见的植物疾病，表现为叶片上出现不规则的褐色或黑色斑点。";
+  let diseaseName = isFallback ? "网络连接错误 - 无法分析图片" : "叶斑病";
+  let description = isFallback 
+    ? "无法连接到智谱清言API分析图片。请检查网络连接后重试，或尝试使用其他图片。以下是示例结果。" 
+    : "叶斑病是一种常见的植物疾病，表现为叶片上出现不规则的褐色或黑色斑点。";
   
-  if (plantType) {
+  if (plantType && !isFallback) {
     if (plantType.includes("水稻")) {
       diseaseName = "稻瘟病";
       description = "稻瘟病是由稻瘟病菌引起的一种常见的水稻疾病，表现为叶片上的褐色病斑和花颈部变黑。";
@@ -189,35 +192,35 @@ function createFallbackResult(plantType?: string): DiagnosisResult {
   return {
     name: diseaseName,
     description: description,
-    confidence: 0.7,
+    confidence: isFallback ? 0.01 : 0.7,
     treatments: [
       {
-        method: "喷洒杀菌剂",
+        method: isFallback ? "重试连接" : "喷洒杀菌剂",
         cost: "medium",
         effectiveness: "high",
         estimatedPrice: "¥40-60/亩",
-        description: "使用专业杀菌剂喷洒，每7-10天一次，连续2-3次。"
+        description: isFallback ? "检查网络连接并重试分析" : "使用专业杀菌剂喷洒，每7-10天一次，连续2-3次。"
       },
       {
-        method: "农业措施",
+        method: isFallback ? "更换WiFi网络" : "农业措施",
         cost: "low",
         effectiveness: "medium",
         estimatedPrice: "¥0-20/亩",
-        description: "保持田间通风，适当控制氮肥使用量，增施钾肥。"
+        description: isFallback ? "尝试切换到更稳定的网络连接" : "保持田间通风，适当控制氮肥使用量，增施钾肥。"
       },
       {
-        method: "生物防治",
+        method: isFallback ? "使用较小图片" : "生物防治",
         cost: "medium",
         effectiveness: "medium",
         estimatedPrice: "¥30-50/亩",
-        description: "使用拮抗微生物制剂，抑制病菌生长。"
+        description: isFallback ? "尝试使用分辨率较低的图片，可能有助于减少网络传输错误" : "使用拮抗微生物制剂，抑制病菌生长。"
       },
       {
-        method: "抗病品种",
+        method: isFallback ? "重启应用" : "抗病品种",
         cost: "high",
         effectiveness: "high",
         estimatedPrice: "¥50-80/亩",
-        description: "选用抗病品种，可显著减少病害发生。"
+        description: isFallback ? "关闭并重新打开应用后再次尝试" : "选用抗病品种，可显著减少病害发生。"
       }
     ]
   };
