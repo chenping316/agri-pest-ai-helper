@@ -110,7 +110,7 @@ const Index: React.FC = () => {
       <footer className="py-6 border-t bg-muted/30">
         <div className="container px-4 text-center text-sm text-muted-foreground">
           <p>农业病虫害AI检测系统 &copy; {new Date().getFullYear()}</p>
-          <p className="mt-1">本地化AI分析，无需网络连接，保护您的数据安全</p>
+          <p className="mt-1">多模型算法赋予你精确的答案，保护你的农田安然无恙</p>
         </div>
       </footer>
     </div>
