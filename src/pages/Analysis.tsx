@@ -4,7 +4,7 @@ import { Navigate } from "react-router-dom";
 import { useAppContext } from "@/context/AppContext";
 import { Image, Smartphone, Wifi, WifiOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { analyzePlantDisease } from "@/utils/aiAnalysis";
+import { analyzePlantDisease, analyzeWithMultipleModels } from "@/utils/aiAnalysis";
 import Navigation from "@/components/Navigation";
 import SearchResults from "@/components/SearchResults";
 import AnalysisHeader from "@/components/analysis/AnalysisHeader";
@@ -12,6 +12,9 @@ import ConnectionStatus from "@/components/analysis/ConnectionStatus";
 import AnalysisInput from "@/components/analysis/AnalysisInput";
 import AnalysisOutput from "@/components/analysis/AnalysisOutput";
 import InfoMessages from "@/components/analysis/InfoMessages";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 const Analysis: React.FC = () => {
   const { 
@@ -33,6 +36,7 @@ const Analysis: React.FC = () => {
   const [analysisProgress, setAnalysisProgress] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchDialogOpen, setSearchDialogOpen] = useState(false);
+  const [useMultiModel, setUseMultiModel] = useState(true); // 默认启用多模型分析
   const { toast } = useToast();
 
   const handleImageCapture = (imageUrl: string) => {
@@ -71,12 +75,20 @@ const Analysis: React.FC = () => {
     }, 500);
     
     try {
-      const result = await analyzePlantDisease(
-        capturedImage,
-        analysisMode,
-        selectedPlantType || undefined,
-        envData || undefined
-      );
+      // 根据用户选择的分析模式调用不同的分析函数
+      const result = useMultiModel 
+        ? await analyzeWithMultipleModels(
+            capturedImage,
+            analysisMode,
+            selectedPlantType || undefined,
+            envData || undefined
+          )
+        : await analyzePlantDisease(
+            capturedImage,
+            analysisMode,
+            selectedPlantType || undefined,
+            envData || undefined
+          );
       
       setDiagnosisResult(result);
       
@@ -129,6 +141,17 @@ const Analysis: React.FC = () => {
           {analysisMode === "image-and-env" && (
             <ConnectionStatus isBluetoothConnected={isBluetoothConnected} />
           )}
+          
+          <div className="mb-4 flex items-center justify-end space-x-2">
+            <Switch 
+              id="multi-model" 
+              checked={useMultiModel} 
+              onCheckedChange={setUseMultiModel} 
+            />
+            <Label htmlFor="multi-model" className="cursor-pointer">
+              {useMultiModel ? "多模型分析（更准确）" : "单模型分析（更快）"}
+            </Label>
+          </div>
           
           <div className="grid md:grid-cols-2 gap-6">
             <AnalysisInput 
