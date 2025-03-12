@@ -1,9 +1,8 @@
-
 import { DiagnosisResult, EnvData, Treatment } from "@/types";
 import { callTaichuVLApi } from "./client";
 
 /**
- * Analyze plant image for disease diagnosis
+ * 分析植物图像以进行疾病诊断
  */
 export async function analyzePlantDisease(
   imageBase64: string,
@@ -11,12 +10,12 @@ export async function analyzePlantDisease(
   envData?: EnvData
 ): Promise<DiagnosisResult> {
   try {
-    // Remove data URL prefix if present
+    // 移除数据URL前缀（如果存在）
     const base64Image = imageBase64.includes("base64,") 
       ? imageBase64.split("base64,")[1] 
       : imageBase64;
     
-    // Prepare environment data string
+    // 准备环境数据字符串
     let envDataString = "";
     if (envData) {
       envDataString = `
@@ -28,7 +27,7 @@ export async function analyzePlantDisease(
 - 空气湿度: ${envData.airHumidity}%`;
     }
     
-    // Create prompts for the model
+    // 为模型创建提示
     const plantTypeInfo = plantType ? `植物类型: ${plantType}` : "植物类型: 未知";
     const systemPrompt = "你是一个专业的植物病害诊断助手，可以根据图片识别植物病害并提供治疗方案。";
     const userPrompt = `请分析这张植物图片，诊断可能的病害。
@@ -39,23 +38,27 @@ ${envDataString}
 1. 病害名称
 2. 病害描述
 3. 置信度(0-1之间的数值)
-4. 治疗方案(包括方法、成本级别(低/中/高)、有效性级别(低/中/高)、估计价格、详细描述)`;
+4. 治疗方案(包括方法、成本级别(低/中/高)、有效性级别(低/中/高)、估计���格、详细描述)`;
 
-    // Call the API
-    const apiResponse = await callTaichuVLApi({
-      systemPrompt,
+    // 调用API
+    const apiResponse = await callTaichuVLApi(
       userPrompt,
-      imageBase64: base64Image
-    });
+      base64Image,
+      systemPrompt,
+      {
+        temperature: 0.7,
+        max_tokens: 2000
+      }
+    );
     
-    // Extract the text response
+    // 提取文本响应
     const responseText = apiResponse.choices?.[0]?.message?.content || "";
     
-    // Parse the response text into structured data
+    // 将响应文本解析为结构化数据
     return parseResponseToResult(responseText, plantType);
   } catch (error) {
     console.error("Error calling Taichu-VL API:", error);
-    // Return fallback data in case of API failure
+    // 在API失败的情况下返回回退数据
     return createFallbackResult(plantType, true);
   }
 }
