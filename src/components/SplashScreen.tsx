@@ -2,7 +2,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { useAppContext } from "@/context/AppContext";
-import { Sprout, Leaf } from "lucide-react";
+import { Sprout, Leaf, Cpu } from "lucide-react";
 
 const SplashScreen: React.FC = () => {
   const { appReady } = useAppContext();
@@ -57,11 +57,22 @@ const SplashScreen: React.FC = () => {
           <Sprout className="h-4 w-4 text-green-200" />
         </motion.div>
         
+        <motion.div
+          className="flex items-center justify-center gap-1.5 mb-2"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.6, delay: 1.5 }}
+        >
+          <Cpu className="h-3.5 w-3.5 text-blue-200" />
+          <p className="text-white/90 text-xs font-medium">多模型分析 | 混合诊断能力</p>
+          <Cpu className="h-3.5 w-3.5 text-blue-200" />
+        </motion.div>
+        
         <motion.p
           className="text-center text-white/80 text-sm max-w-xs"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 0.6, delay: 1.5 }}
+          transition={{ duration: 0.6, delay: 1.8 }}
         >
           杭州穹枢科技有限公司
         </motion.p>
@@ -71,7 +82,7 @@ const SplashScreen: React.FC = () => {
         className="absolute bottom-8"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ duration: 0.4, delay: 1.8 }}
+        transition={{ duration: 0.4, delay: 2.1 }}
       >
         <svg className="w-8 h-8 text-white animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />

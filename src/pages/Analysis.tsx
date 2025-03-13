@@ -4,7 +4,11 @@ import { Navigate } from "react-router-dom";
 import { useAppContext } from "@/context/AppContext";
 import { Image, Smartphone, Wifi, WifiOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { analyzePlantDisease, analyzeWithMultipleModels } from "@/utils/aiAnalysis";
+import { 
+  analyzePlantDisease, 
+  analyzeWithMultipleModels, 
+  AnalysisModelType 
+} from "@/utils/aiAnalysis";
 import Navigation from "@/components/Navigation";
 import SearchResults from "@/components/SearchResults";
 import AnalysisHeader from "@/components/analysis/AnalysisHeader";
@@ -15,6 +19,7 @@ import InfoMessages from "@/components/analysis/InfoMessages";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const Analysis: React.FC = () => {
   const { 
@@ -37,6 +42,7 @@ const Analysis: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchDialogOpen, setSearchDialogOpen] = useState(false);
   const [useMultiModel, setUseMultiModel] = useState(true); // 默认启用多模型分析
+  const [selectedModel, setSelectedModel] = useState<AnalysisModelType>('taichu'); // 默认使用Taichu-VL模型
   const { toast } = useToast();
 
   const handleImageCapture = (imageUrl: string) => {
@@ -76,19 +82,26 @@ const Analysis: React.FC = () => {
     
     try {
       // 根据用户选择的分析模式调用不同的分析函数
-      const result = useMultiModel 
-        ? await analyzeWithMultipleModels(
-            capturedImage,
-            analysisMode,
-            selectedPlantType || undefined,
-            envData || undefined
-          )
-        : await analyzePlantDisease(
-            capturedImage,
-            analysisMode,
-            selectedPlantType || undefined,
-            envData || undefined
-          );
+      let result;
+      
+      if (useMultiModel) {
+        // 使用多模型分析
+        result = await analyzeWithMultipleModels(
+          capturedImage,
+          analysisMode,
+          selectedPlantType || undefined,
+          envData || undefined
+        );
+      } else {
+        // 使用单模型分析
+        result = await analyzePlantDisease(
+          capturedImage,
+          analysisMode,
+          selectedPlantType || undefined,
+          envData || undefined,
+          selectedModel
+        );
+      }
       
       setDiagnosisResult(result);
       
@@ -142,15 +155,35 @@ const Analysis: React.FC = () => {
             <ConnectionStatus isBluetoothConnected={isBluetoothConnected} />
           )}
           
-          <div className="mb-4 flex items-center justify-end space-x-2">
-            <Switch 
-              id="multi-model" 
-              checked={useMultiModel} 
-              onCheckedChange={setUseMultiModel} 
-            />
-            <Label htmlFor="multi-model" className="cursor-pointer">
-              {useMultiModel ? "多模型分析（更准确）" : "单模型分析（更快）"}
-            </Label>
+          <div className="mb-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-2">
+            <div className="flex items-center space-x-2">
+              <Switch 
+                id="multi-model" 
+                checked={useMultiModel} 
+                onCheckedChange={setUseMultiModel} 
+              />
+              <Label htmlFor="multi-model" className="cursor-pointer">
+                {useMultiModel ? "多模型分析（更准确）" : "单模型分析（更快）"}
+              </Label>
+            </div>
+            
+            {!useMultiModel && (
+              <div className="flex items-center space-x-2">
+                <Label htmlFor="model-select">选择模型:</Label>
+                <Select 
+                  value={selectedModel} 
+                  onValueChange={(value) => setSelectedModel(value as AnalysisModelType)}
+                >
+                  <SelectTrigger id="model-select" className="w-[180px]">
+                    <SelectValue placeholder="选择AI模型" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="taichu">Taichu-VL (快速)</SelectItem>
+                    <SelectItem value="nyai">NYAI (精准)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
           
           <div className="grid md:grid-cols-2 gap-6">

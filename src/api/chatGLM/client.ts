@@ -8,7 +8,15 @@
 const API_BASE_URL = "https://chatglm.cn/chatglm/assistant-api/v1";
 const API_KEY = "79efc8b59478d8f6";
 const API_SECRET = "cf7c3fe9b8f6f9d0b2abbcdd57346d71";
-const ASSISTANT_ID = "67d232043fa8d1e2e1563e69"; // Updated assistant ID
+const ASSISTANT_ID = "67d232043fa8d1e2e1563e69"; // 使用更新后的智慧体ID
+
+// API 请求选项接口
+export interface ChatGLMOptions {
+  temperature?: number;
+  top_p?: number;
+  max_tokens?: number;
+  stream?: boolean;
+}
 
 // 接口类型定义
 export interface ChatGLMMessage {
@@ -86,17 +94,55 @@ async function getAccessToken(): Promise<string> {
 }
 
 /**
+ * 格式化图像URL
+ * @param imageBase64 图像的Base64字符串或URL
+ * @returns 格式化后的图像URL
+ */
+function formatImageUrl(imageBase64: string): string {
+  return imageBase64.startsWith("http") 
+    ? imageBase64 
+    : `data:image/jpeg;base64,${imageBase64}`;
+}
+
+/**
+ * 从响应中提取文本内容
+ * @param jsonResponse API响应
+ * @returns 提取的文本内容
+ */
+function extractTextFromResponse(jsonResponse: any): string {
+  let textContent = "";
+  const message = jsonResponse.result?.message;
+  
+  if (message?.content) {
+    const content = message.content;
+    
+    if (typeof content === 'string') {
+      textContent = content;
+    } else if (content.type === 'text') {
+      textContent = content.text || "";
+    } else if (Array.isArray(content) && content.length > 0) {
+      // 处理可能的数组格式内容
+      const textItems = content
+        .filter(item => item.type === 'text' || item.text)
+        .map(item => item.text || "");
+      textContent = textItems.join('\n');
+    }
+  }
+  
+  return textContent;
+}
+
+/**
  * 发送请求到NYAI API
+ * @param userPrompt 用户提示
+ * @param imageBase64 图像的Base64字符串或URL
+ * @param options API选项
+ * @returns 格式化后的API响应
  */
 export async function callChatGLMApi(
   userPrompt: string,
   imageBase64: string,
-  options: {
-    temperature?: number;
-    top_p?: number;
-    max_tokens?: number;
-    stream?: boolean;
-  } = {}
+  options: ChatGLMOptions = {}
 ): Promise<any> {
   console.log("准备向NYAI API发送请求...");
   
@@ -105,13 +151,11 @@ export async function callChatGLMApi(
     const accessToken = await getAccessToken();
     
     // 2. 准备图片URL，确保有正确的格式
-    const imageUrl = imageBase64.startsWith("http") 
-      ? imageBase64 
-      : `data:image/jpeg;base64,${imageBase64}`;
+    const imageUrl = formatImageUrl(imageBase64);
     
-    // 3. 优化请求体结构，使用ASSISTANT_ID智慧体ID和符合API规范的结构
+    // 3. 准备请求体
     const payload = {
-      assistant_id: ASSISTANT_ID, // 使用更新后的智慧体ID
+      assistant_id: ASSISTANT_ID,
       prompt: userPrompt,
       file_list: imageBase64 ? [{ file_id: imageUrl }] : [],
       meta_data: {
@@ -123,8 +167,7 @@ export async function callChatGLMApi(
     
     console.log("向NYAI API发送请求...");
     
-    // 4. 使用正确的端点和请求头
-    // 注意: 使用非流式输出端点，方便处理响应
+    // 4. 发送API请求
     const endpoint = options.stream ? "/stream" : "/chat/completions";
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: "POST",
@@ -149,24 +192,7 @@ export async function callChatGLMApi(
     }
     
     // 6. 从响应中提取文本内容
-    let textContent = "";
-    const message = jsonResponse.result?.message;
-    
-    if (message?.content) {
-      const content = message.content;
-      
-      if (typeof content === 'string') {
-        textContent = content;
-      } else if (content.type === 'text') {
-        textContent = content.text || "";
-      } else if (Array.isArray(content) && content.length > 0) {
-        // 处理可能的数组格式内容
-        const textItems = content
-          .filter(item => item.type === 'text' || item.text)
-          .map(item => item.text || "");
-        textContent = textItems.join('\n');
-      }
-    }
+    const textContent = extractTextFromResponse(jsonResponse);
     
     // 7. 返回处理后的响应，保持与OpenAI格式兼容
     return {

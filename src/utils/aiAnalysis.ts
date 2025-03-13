@@ -5,27 +5,41 @@ import { analyzePlantDisease as chatGLMAnalyzePlantDisease } from "@/api/chatGLM
 import { toast } from "sonner";
 
 /**
+ * 定义分析模型类型
+ */
+export type AnalysisModelType = 'taichu' | 'nyai' | 'multi';
+
+/**
  * 使用单一模型分析植物疾病的函数
  */
 export const analyzePlantDisease = async (
   imageBase64: string,
   mode: AnalysisMode,
   plantType?: string,
-  envData?: EnvData
+  envData?: EnvData,
+  modelType: AnalysisModelType = 'taichu'
 ): Promise<DiagnosisResult> => {
-  console.log(`Analyzing image with mode: ${mode}, plant type: ${plantType || 'not specified'}`);
+  console.log(`使用${modelType}模型分析图像，模式: ${mode}, 植物类型: ${plantType || '未指定'}`);
   
   try {
-    // 调用API客户端分析图像
-    const result = await taichuAnalyzePlantDisease(
-      imageBase64,
-      plantType,
-      mode === 'image-and-env' ? envData : undefined
-    );
-    
-    return result;
+    // 根据指定的模型类型调用相应的API
+    if (modelType === 'nyai') {
+      // 使用NYAI (ChatGLM)模型
+      return await chatGLMAnalyzePlantDisease(
+        imageBase64,
+        plantType,
+        mode === 'image-and-env' ? envData : undefined
+      );
+    } else {
+      // 默认使用Taichu-VL模型
+      return await taichuAnalyzePlantDisease(
+        imageBase64,
+        plantType,
+        mode === 'image-and-env' ? envData : undefined
+      );
+    }
   } catch (error) {
-    console.error("Error in analyzePlantDisease:", error);
+    console.error(`${modelType}模型分析出错:`, error);
     throw error;
   }
 };
@@ -39,7 +53,7 @@ export const analyzeWithMultipleModels = async (
   plantType?: string,
   envData?: EnvData
 ): Promise<DiagnosisResult> => {
-  console.log(`Starting multi-model analysis with mode: ${mode}, plant type: ${plantType || 'not specified'}`);
+  console.log(`开始多模型分析，模式: ${mode}, 植物类型: ${plantType || '未指定'}`);
   
   // 定义模型分析结果和错误
   let taichuResult: DiagnosisResult | null = null;
@@ -51,24 +65,28 @@ export const analyzeWithMultipleModels = async (
     // 并行调用两个模型API以减少等待时间
     [taichuResult, nyaiResult] = await Promise.all([
       // Taichu-VL 模型
-      taichuAnalyzePlantDisease(
+      analyzePlantDisease(
         imageBase64,
+        mode,
         plantType,
-        mode === 'image-and-env' ? envData : undefined
+        mode === 'image-and-env' ? envData : undefined,
+        'taichu'
       ).catch(error => {
-        console.error("Error in Taichu-VL analysis:", error);
+        console.error("Taichu-VL模型分析失败:", error);
         taichuError = error;
         toast.error("Taichu-VL模型分析失败，将仅使用NYAI结果");
         return null;
       }),
       
       // NYAI (ChatGLM) 模型
-      chatGLMAnalyzePlantDisease(
+      analyzePlantDisease(
         imageBase64,
+        mode,
         plantType,
-        mode === 'image-and-env' ? envData : undefined
+        mode === 'image-and-env' ? envData : undefined,
+        'nyai'
       ).catch(error => {
-        console.error("Error in NYAI analysis:", error);
+        console.error("NYAI模型分析失败:", error);
         nyaiError = error;
         toast.error("NYAI模型分析失败，将仅使用Taichu-VL结果");
         return null;
@@ -89,7 +107,7 @@ export const analyzeWithMultipleModels = async (
     // 综合两个模型的结果
     return combineResults(taichuResult, nyaiResult);
   } catch (error) {
-    console.error("Error in multi-model analysis:", error);
+    console.error("多模型分析出错:", error);
     throw error;
   }
 };
@@ -98,7 +116,7 @@ export const analyzeWithMultipleModels = async (
  * 综合两个模型的分析结果
  */
 function combineResults(result1: DiagnosisResult, result2: DiagnosisResult): DiagnosisResult {
-  console.log("Combining results from multiple models");
+  console.log("综合多个模型的分析结果");
   
   // 如果疾病名称相同，增加置信度，否则选择置信度较高的
   const useResult1 = 
