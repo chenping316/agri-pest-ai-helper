@@ -8,6 +8,7 @@
 const API_BASE_URL = "https://chatglm.cn/chatglm/assistant-api/v1";
 const API_KEY = "79efc8b59478d8f6";
 const API_SECRET = "cf7c3fe9b8f6f9d0b2abbcdd57346d71";
+const ASSISTANT_ID = "67d232043fa8d1e2e1563e69"; // Updated assistant ID
 
 // 接口类型定义
 export interface ChatGLMMessage {
@@ -108,9 +109,9 @@ export async function callChatGLMApi(
       ? imageBase64 
       : `data:image/jpeg;base64,${imageBase64}`;
     
-    // 3. 优化请求体结构，使用F3s9k智慧体ID和符合API规范的结构
+    // 3. 优化请求体结构，使用ASSISTANT_ID智慧体ID和符合API规范的结构
     const payload = {
-      assistant_id: "F3s9k", // 使用您提供的智慧体ID
+      assistant_id: ASSISTANT_ID, // 使用更新后的智慧体ID
       prompt: userPrompt,
       file_list: imageBase64 ? [{ file_id: imageUrl }] : [],
       meta_data: {
