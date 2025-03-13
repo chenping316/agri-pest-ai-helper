@@ -1,9 +1,8 @@
-
 import { DiagnosisResult, EnvData, Treatment } from "@/types";
 import { callChatGLMApi } from "./client";
 
 /**
- * 使用ChatGLM分析植物图像进行疾病诊断
+ * 使用NYAI分析植物图像进行疾病诊断
  */
 export async function analyzePlantDisease(
   imageBase64: string,
@@ -65,7 +64,7 @@ ${envDataString}
     // 从原有的taichuVL分析模块中复用解析逻辑
     return parseResponseToResult(responseText, plantType);
   } catch (error) {
-    console.error("Error calling ChatGLM API:", error);
+    console.error("Error calling NYAI API:", error);
     // 在API失败的情况下返回回退数据
     return createFallbackResult(plantType, true);
   }
@@ -247,12 +246,12 @@ function addDefaultDetailedTreatments(treatments: Treatment[]): void {
  * Create fallback diagnosis result if API call fails
  */
 function createFallbackResult(plantType?: string, isFallback: boolean = false): DiagnosisResult {
-  console.log("Using fallback diagnosis result for ChatGLM");
+  console.log("Using fallback diagnosis result for NYAI");
   
-  // Similar to TaichuVL's fallback with an identifier for ChatGLM
-  let diseaseName = isFallback ? "ChatGLM API连接错误 - 无法分析图片" : "叶斑病";
+  // Similar to TaichuVL's fallback with an identifier for NYAI
+  let diseaseName = isFallback ? "NYAI API连接错误 - 无法分析图片" : "叶斑病";
   let description = isFallback 
-    ? "无法连接到ChatGLM API进行图片分析。请检查网络连接后重试，或尝试使用其他图片。以下是示例结果。" 
+    ? "无法连接到NYAI API进行图片分析。请检查网络连接后重试，或尝试使用其他图片。以下是示例结果。" 
     : "叶斑病是一种常见的植物疾病，表现为叶片上出现不规则的褐色或黑色斑点。";
   
   if (plantType && !isFallback) {

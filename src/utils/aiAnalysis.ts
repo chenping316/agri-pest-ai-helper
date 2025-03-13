@@ -43,14 +43,14 @@ export const analyzeWithMultipleModels = async (
   
   try {
     // 并行调用两个模型API以减少等待时间
-    const [taichuPromise, chatGLMPromise] = [
+    const [taichuPromise, nyaiPromise] = [
       taichuAnalyzePlantDisease(
         imageBase64,
         plantType,
         mode === 'image-and-env' ? envData : undefined
       ).catch(error => {
         console.error("Error in Taichu-VL analysis:", error);
-        toast.error("Taichu-VL模型分析失败，将仅使用ChatGLM结果");
+        toast.error("Taichu-VL模型分析失败，将仅使用NYAI结果");
         return null;
       }),
       
@@ -59,26 +59,26 @@ export const analyzeWithMultipleModels = async (
         plantType,
         mode === 'image-and-env' ? envData : undefined
       ).catch(error => {
-        console.error("Error in ChatGLM analysis:", error);
-        toast.error("ChatGLM模型分析失败，将仅使用Taichu-VL结果");
+        console.error("Error in NYAI analysis:", error);
+        toast.error("NYAI模型分析失败，将仅使用Taichu-VL结果");
         return null;
       })
     ];
     
     // 等待所有模型的结果
-    const [taichuResult, chatGLMResult] = await Promise.all([taichuPromise, chatGLMPromise]);
+    const [taichuResult, nyaiResult] = await Promise.all([taichuPromise, nyaiPromise]);
     
     // 如果两个模型都失败，抛出错误
-    if (!taichuResult && !chatGLMResult) {
+    if (!taichuResult && !nyaiResult) {
       throw new Error("所有模型分析都失败了");
     }
     
     // 如果只有一个模型成功，返回成功的那个结果
-    if (!taichuResult) return chatGLMResult!;
-    if (!chatGLMResult) return taichuResult;
+    if (!taichuResult) return nyaiResult!;
+    if (!nyaiResult) return taichuResult;
     
     // 综合两个模型的结果
-    return combineResults(taichuResult, chatGLMResult);
+    return combineResults(taichuResult, nyaiResult);
   } catch (error) {
     console.error("Error in multi-model analysis:", error);
     throw error;

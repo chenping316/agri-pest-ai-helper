@@ -1,6 +1,6 @@
 
 /**
- * ChatGLM API Client
+ * NYAI (ChatGLM) API Client
  * API documentation: https://chatglm.cn/
  */
 
@@ -48,10 +48,10 @@ interface TokenResponse {
 }
 
 /**
- * 获取ChatGLM API访问令牌
+ * 获取NYAI API访问令牌
  */
 async function getAccessToken(): Promise<string> {
-  console.log("正在获取ChatGLM API访问令牌...");
+  console.log("正在获取NYAI API访问令牌...");
   
   try {
     const response = await fetch(`${API_BASE_URL}/get_token`, {
@@ -76,16 +76,16 @@ async function getAccessToken(): Promise<string> {
       throw new Error(`获取令牌失败: ${tokenData.message || "未知错误"}`);
     }
     
-    console.log("成功获取ChatGLM API访问令牌");
+    console.log("成功获取NYAI API访问令牌");
     return tokenData.result.access_token;
   } catch (error) {
-    console.error("获取ChatGLM访问令牌时出错:", error);
-    throw new Error(`获取ChatGLM访问令牌失败: ${error instanceof Error ? error.message : String(error)}`);
+    console.error("获取NYAI访问令牌时出错:", error);
+    throw new Error(`获取NYAI访问令牌失败: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
 /**
- * 发送请求到ChatGLM API
+ * 发送请求到NYAI API
  */
 export async function callChatGLMApi(
   userPrompt: string,
@@ -97,7 +97,7 @@ export async function callChatGLMApi(
     stream?: boolean;
   } = {}
 ): Promise<any> {
-  console.log("准备向ChatGLM API发送请求...");
+  console.log("准备向NYAI API发送请求...");
   
   try {
     // 1. 获取访问令牌
@@ -125,7 +125,7 @@ export async function callChatGLMApi(
       }
     };
     
-    console.log("向ChatGLM API发送请求...");
+    console.log("向NYAI API发送请求...");
     
     // 4. 发送API请求
     const response = await fetch(`${API_BASE_URL}/chat/completions`, {
@@ -139,15 +139,15 @@ export async function callChatGLMApi(
     
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`ChatGLM API请求失败: ${response.status} - ${errorText}`);
+      throw new Error(`NYAI API请求失败: ${response.status} - ${errorText}`);
     }
     
     const jsonResponse = await response.json();
-    console.log("收到来自ChatGLM API的响应:", jsonResponse);
+    console.log("收到来自NYAI API的响应:", jsonResponse);
     
     // 5. 处理响应结果
     if (jsonResponse.status !== 0) {
-      throw new Error(`ChatGLM API返回错误: ${jsonResponse.message || "未知错误"}`);
+      throw new Error(`NYAI API返回错误: ${jsonResponse.message || "未知错误"}`);
     }
     
     // 6. 从响应中提取文本内容
@@ -180,7 +180,7 @@ export async function callChatGLMApi(
       }
     };
   } catch (error) {
-    console.error("调用ChatGLM API时出错:", error);
+    console.error("调用NYAI API时出错:", error);
     throw error;
   }
 }
