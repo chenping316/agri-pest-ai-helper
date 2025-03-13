@@ -41,36 +41,45 @@ export const analyzeWithMultipleModels = async (
 ): Promise<DiagnosisResult> => {
   console.log(`Starting multi-model analysis with mode: ${mode}, plant type: ${plantType || 'not specified'}`);
   
+  // 定义模型分析结果和错误
+  let taichuResult: DiagnosisResult | null = null;
+  let taichuError: any = null;
+  let nyaiResult: DiagnosisResult | null = null;
+  let nyaiError: any = null;
+  
   try {
     // 并行调用两个模型API以减少等待时间
-    const [taichuPromise, nyaiPromise] = [
+    [taichuResult, nyaiResult] = await Promise.all([
+      // Taichu-VL 模型
       taichuAnalyzePlantDisease(
         imageBase64,
         plantType,
         mode === 'image-and-env' ? envData : undefined
       ).catch(error => {
         console.error("Error in Taichu-VL analysis:", error);
+        taichuError = error;
         toast.error("Taichu-VL模型分析失败，将仅使用NYAI结果");
         return null;
       }),
       
+      // NYAI (ChatGLM) 模型
       chatGLMAnalyzePlantDisease(
         imageBase64,
         plantType,
         mode === 'image-and-env' ? envData : undefined
       ).catch(error => {
         console.error("Error in NYAI analysis:", error);
+        nyaiError = error;
         toast.error("NYAI模型分析失败，将仅使用Taichu-VL结果");
         return null;
       })
-    ];
+    ]);
     
-    // 等待所有模型的结果
-    const [taichuResult, nyaiResult] = await Promise.all([taichuPromise, nyaiPromise]);
-    
-    // 如果两个模型都失败，抛出错误
+    // 如果两个模型都失败，抛出组合错误
     if (!taichuResult && !nyaiResult) {
-      throw new Error("所有模型分析都失败了");
+      const errorMessage = "所有模型分析都失败了";
+      console.error(errorMessage, {taichuError, nyaiError});
+      throw new Error(errorMessage);
     }
     
     // 如果只有一个模型成功，返回成功的那个结果
@@ -109,19 +118,29 @@ function combineResults(result1: DiagnosisResult, result2: DiagnosisResult): Dia
     newConfidence = Math.min(1, (result1.confidence + result2.confidence) / 2 + 0.1);
   }
   
-  // 合并处理方法（取两者的前2种方法）
-  const combinedTreatments = [
-    ...baseResult.treatments.slice(0, 2),
-    ...secondaryResult.treatments
-      .filter(t => !baseResult.treatments.slice(0, 2).some(bt => bt.method === t.method))
-      .slice(0, 2)
-  ];
+  // 合并描述，选择更详细的描述
+  const combinedDescription = 
+    baseResult.description.length > secondaryResult.description.length 
+      ? baseResult.description 
+      : secondaryResult.description;
+  
+  // 智能合并处理方法
+  const allTreatments = [...baseResult.treatments, ...secondaryResult.treatments];
+  const uniqueMethods = new Set<string>();
+  const combinedTreatments = allTreatments
+    .filter(treatment => {
+      // 检查是否已经添加了该方法
+      if (uniqueMethods.has(treatment.method)) {
+        return false;
+      }
+      uniqueMethods.add(treatment.method);
+      return true;
+    })
+    .slice(0, 4); // 最多保留4种处理方法
   
   return {
     name: baseResult.name,
-    description: baseResult.description.length > secondaryResult.description.length 
-      ? baseResult.description 
-      : secondaryResult.description,
+    description: combinedDescription,
     confidence: newConfidence,
     treatments: combinedTreatments
   };

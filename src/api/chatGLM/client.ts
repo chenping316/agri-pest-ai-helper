@@ -108,16 +108,11 @@ export async function callChatGLMApi(
       ? imageBase64 
       : `data:image/jpeg;base64,${imageBase64}`;
     
-    // 3. 准备请求体
-    // 注意：根据文档，我们应该使用correct的参数结构
+    // 3. 优化请求体结构，使用F3s9k智慧体ID和符合API规范的结构
     const payload = {
-      assistant_id: "8SFb5rRcyoxP", // 使用GLM-4V的智能体ID
+      assistant_id: "F3s9k", // 使用您提供的智慧体ID
       prompt: userPrompt,
-      file_list: [
-        {
-          file_id: imageUrl // 直接传图片URL或base64
-        }
-      ],
+      file_list: imageBase64 ? [{ file_id: imageUrl }] : [],
       meta_data: {
         temperature: options.temperature ?? 0.7,
         top_p: options.top_p ?? 0.9,
@@ -127,8 +122,10 @@ export async function callChatGLMApi(
     
     console.log("向NYAI API发送请求...");
     
-    // 4. 发送API请求
-    const response = await fetch(`${API_BASE_URL}/chat/completions`, {
+    // 4. 使用正确的端点和请求头
+    // 注意: 使用非流式输出端点，方便处理响应
+    const endpoint = options.stream ? "/stream" : "/chat/completions";
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -152,17 +149,25 @@ export async function callChatGLMApi(
     
     // 6. 从响应中提取文本内容
     let textContent = "";
-    if (jsonResponse.result?.message?.content?.text) {
-      textContent = jsonResponse.result.message.content.text;
-    } else if (typeof jsonResponse.result?.message?.content === 'object') {
-      // 处理可能的复杂内容结构
-      const content = jsonResponse.result.message.content;
-      if (content.type === 'text') {
+    const message = jsonResponse.result?.message;
+    
+    if (message?.content) {
+      const content = message.content;
+      
+      if (typeof content === 'string') {
+        textContent = content;
+      } else if (content.type === 'text') {
         textContent = content.text || "";
+      } else if (Array.isArray(content) && content.length > 0) {
+        // 处理可能的数组格式内容
+        const textItems = content
+          .filter(item => item.type === 'text' || item.text)
+          .map(item => item.text || "");
+        textContent = textItems.join('\n');
       }
     }
     
-    // 7. 返回处理后的响应
+    // 7. 返回处理后的响应，保持与OpenAI格式兼容
     return {
       choices: [
         {
