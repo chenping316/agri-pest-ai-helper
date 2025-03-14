@@ -1,16 +1,16 @@
 
 /**
- * NYAI (ChatGLM) API Client
- * API documentation: https://chatglm.cn/
+ * 智谱清言 (ChatGLM) API 客户端
+ * API文档: https://chatglm.cn/chatglm/assistant-api/v1/
  */
 
-// API constants
+// API常量
 const API_BASE_URL = "https://chatglm.cn/chatglm/assistant-api/v1";
 const API_KEY = "79efc8b59478d8f6";
 const API_SECRET = "cf7c3fe9b8f6f9d0b2abbcdd57346d71";
-const ASSISTANT_ID = "67d232043fa8d1e2e1563e69"; // 使用更新后的智慧体ID
+const ASSISTANT_ID = "67d232043fa8d1e2e1563e69"; // 智慧体ID
 
-// API 请求选项接口
+// API请求选项接口
 export interface ChatGLMOptions {
   temperature?: number;
   top_p?: number;
@@ -33,12 +33,10 @@ export interface ChatGLMResponse {
   result?: {
     history_id: string;
     conversation_id: string;
-    message: {
+    output?: any[];
+    message?: {
       role: string;
-      content: {
-        type: string;
-        text?: string;
-      };
+      content: any;
       status: string;
       created_at: string;
     };
@@ -57,10 +55,10 @@ interface TokenResponse {
 }
 
 /**
- * 获取NYAI API访问令牌
+ * 获取智谱清言API访问令牌
  */
 async function getAccessToken(): Promise<string> {
-  console.log("正在获取NYAI API访问令牌...");
+  console.log("正在获取智谱清言API访问令牌...");
   
   try {
     const response = await fetch(`${API_BASE_URL}/get_token`, {
@@ -85,18 +83,17 @@ async function getAccessToken(): Promise<string> {
       throw new Error(`获取令牌失败: ${tokenData.message || "未知错误"}`);
     }
     
-    console.log("成功获取NYAI API访问令牌");
+    console.log("成功获取智谱清言API访问令牌");
     return tokenData.result.access_token;
   } catch (error) {
-    console.error("获取NYAI访问令牌时出错:", error);
-    throw new Error(`获取NYAI访问令牌失败: ${error instanceof Error ? error.message : String(error)}`);
+    console.error("获取智谱清言访问令牌时出错:", error);
+    throw new Error(`获取智谱清言访问令牌失败: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
 /**
  * 格式化图像URL
  * @param imageBase64 图像的Base64字符串或URL
- * @returns 格式化后的图像URL
  */
 function formatImageUrl(imageBase64: string): string {
   return imageBase64.startsWith("http") 
@@ -107,14 +104,22 @@ function formatImageUrl(imageBase64: string): string {
 /**
  * 从响应中提取文本内容
  * @param jsonResponse API响应
- * @returns 提取的文本内容
  */
 function extractTextFromResponse(jsonResponse: any): string {
   let textContent = "";
-  const message = jsonResponse.result?.message;
   
-  if (message?.content) {
-    const content = message.content;
+  // 处理非流式响应
+  if (jsonResponse.result?.output && Array.isArray(jsonResponse.result.output)) {
+    // 从output数组中查找文本内容
+    for (const part of jsonResponse.result.output) {
+      if (part.content && part.content.type === 'text' && part.content.text) {
+        textContent += part.content.text;
+      }
+    }
+  } 
+  // 处理流式响应
+  else if (jsonResponse.result?.message?.content) {
+    const content = jsonResponse.result.message.content;
     
     if (typeof content === 'string') {
       textContent = content;
@@ -133,18 +138,17 @@ function extractTextFromResponse(jsonResponse: any): string {
 }
 
 /**
- * 发送请求到NYAI API
+ * 发送请求到智谱清言API
  * @param userPrompt 用户提示
  * @param imageBase64 图像的Base64字符串或URL
  * @param options API选项
- * @returns 格式化后的API响应
  */
 export async function callChatGLMApi(
   userPrompt: string,
   imageBase64: string,
   options: ChatGLMOptions = {}
 ): Promise<any> {
-  console.log("准备向NYAI API发送请求...");
+  console.log("准备向智谱清言API发送请求...");
   
   try {
     // 1. 获取访问令牌
@@ -153,7 +157,7 @@ export async function callChatGLMApi(
     // 2. 准备图片URL，确保有正确的格式
     const imageUrl = formatImageUrl(imageBase64);
     
-    // 3. 准备请求体
+    // 3. 准备请求体 - 符合新API规范
     const payload = {
       assistant_id: ASSISTANT_ID,
       prompt: userPrompt,
@@ -165,10 +169,10 @@ export async function callChatGLMApi(
       }
     };
     
-    console.log("向NYAI API发送请求...");
+    console.log("向智谱清言API发送请求...");
     
-    // 4. 发送API请求
-    const endpoint = options.stream ? "/stream" : "/chat/completions";
+    // 4. 发送API请求 - 使用非流式接口 stream_sync
+    const endpoint = options.stream ? "/stream" : "/stream_sync";
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: "POST",
       headers: {
@@ -180,15 +184,15 @@ export async function callChatGLMApi(
     
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`NYAI API请求失败: ${response.status} - ${errorText}`);
+      throw new Error(`智谱清言API请求失败: ${response.status} - ${errorText}`);
     }
     
     const jsonResponse = await response.json();
-    console.log("收到来自NYAI API的响应:", jsonResponse);
+    console.log("收到来自智谱清言API的响应:", jsonResponse);
     
     // 5. 处理响应结果
     if (jsonResponse.status !== 0) {
-      throw new Error(`NYAI API返回错误: ${jsonResponse.message || "未知错误"}`);
+      throw new Error(`智谱清言API返回错误: ${jsonResponse.message || "未知错误"}`);
     }
     
     // 6. 从响应中提取文本内容
@@ -209,10 +213,11 @@ export async function callChatGLMApi(
         prompt_tokens: 0,
         completion_tokens: 0,
         total_tokens: 0
-      }
+      },
+      model: "智谱清言" // 添加模型名称
     };
   } catch (error) {
-    console.error("调用NYAI API时出错:", error);
+    console.error("调用智谱清言API时出错:", error);
     throw error;
   }
 }
