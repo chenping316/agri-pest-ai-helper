@@ -56,6 +56,12 @@ interface TokenResponse {
 
 /**
  * 获取智谱清言API访问令牌
+ * 参考Python实现:
+ * def get_token(api_key, api_secret):
+ *   url = "https://chatglm.cn/chatglm/assistant-api/v1/get_token"
+ *   payload = {"api_key": api_key, "api_secret": api_secret}
+ *   response = requests.post(url, json=payload)
+ *   ...
  */
 async function getAccessToken(): Promise<string> {
   console.log("正在获取智谱清言API访问令牌...");
@@ -157,7 +163,7 @@ export async function callChatGLMApi(
     // 2. 准备图片URL，确保有正确的格式
     const imageUrl = formatImageUrl(imageBase64);
     
-    // 3. 准备请求体 - 符合新API规范
+    // 3. 准备请求体 - 符合API规范
     const payload = {
       assistant_id: ASSISTANT_ID,
       prompt: userPrompt,
