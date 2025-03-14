@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Navigate } from "react-router-dom";
 import { useAppContext } from "@/context/AppContext";
@@ -179,7 +178,7 @@ const Analysis: React.FC = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="taichu">Taichu-VL (快速)</SelectItem>
-                    <SelectItem value="nyai">NYAI (精准)</SelectItem>
+                    <SelectItem value="zhipu">智谱清言 (精准)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

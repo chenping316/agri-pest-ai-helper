@@ -7,7 +7,7 @@ import { toast } from "sonner";
 /**
  * 定义分析模型类型
  */
-export type AnalysisModelType = 'taichu' | 'nyai' | 'multi';
+export type AnalysisModelType = 'taichu' | 'zhipu' | 'multi';
 
 /**
  * 使用单一模型分析植物疾病的函数
@@ -23,7 +23,7 @@ export const analyzePlantDisease = async (
   
   try {
     // 根据指定的模型类型调用相应的API
-    if (modelType === 'nyai') {
+    if (modelType === 'zhipu') {
       // 使用智谱清言模型
       return await chatGLMAnalyzePlantDisease(
         imageBase64,
@@ -58,12 +58,12 @@ export const analyzeWithMultipleModels = async (
   // 定义模型分析结果和错误
   let taichuResult: DiagnosisResult | null = null;
   let taichuError: any = null;
-  let nyaiResult: DiagnosisResult | null = null;
-  let nyaiError: any = null;
+  let zhipuResult: DiagnosisResult | null = null;
+  let zhipuError: any = null;
   
   try {
     // 并行调用两个模型API以减少等待时间
-    [taichuResult, nyaiResult] = await Promise.all([
+    [taichuResult, zhipuResult] = await Promise.all([
       // Taichu-VL 模型
       analyzePlantDisease(
         imageBase64,
@@ -84,28 +84,28 @@ export const analyzeWithMultipleModels = async (
         mode,
         plantType,
         mode === 'image-and-env' ? envData : undefined,
-        'nyai'
+        'zhipu'
       ).catch(error => {
         console.error("智谱清言模型分析失败:", error);
-        nyaiError = error;
+        zhipuError = error;
         toast.error("智谱清言模型分析失败，将仅使用Taichu-VL结果");
         return null;
       })
     ]);
     
     // 如果两个模型都失败，抛出组合错误
-    if (!taichuResult && !nyaiResult) {
+    if (!taichuResult && !zhipuResult) {
       const errorMessage = "所有模型分析都失败了";
-      console.error(errorMessage, {taichuError, nyaiError});
+      console.error(errorMessage, {taichuError, zhipuError});
       throw new Error(errorMessage);
     }
     
     // 如果只有一个模型成功，返回成功的那个结果
-    if (!taichuResult) return nyaiResult!;
-    if (!nyaiResult) return taichuResult;
+    if (!taichuResult) return zhipuResult!;
+    if (!zhipuResult) return taichuResult;
     
     // 综合两个模型的结果
-    return combineResults(taichuResult, nyaiResult);
+    return combineResults(taichuResult, zhipuResult);
   } catch (error) {
     console.error("多模型分析出错:", error);
     throw error;
