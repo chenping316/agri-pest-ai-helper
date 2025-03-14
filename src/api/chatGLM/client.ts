@@ -102,6 +102,9 @@ async function getAccessToken(): Promise<string> {
  * @param imageBase64 图像的Base64字符串或URL
  */
 function formatImageUrl(imageBase64: string): string {
+  if (!imageBase64) return "";
+  
+  // 检查是否已经是完整的URL
   return imageBase64.startsWith("http") 
     ? imageBase64 
     : `data:image/jpeg;base64,${imageBase64}`;
@@ -114,30 +117,34 @@ function formatImageUrl(imageBase64: string): string {
 function extractTextFromResponse(jsonResponse: any): string {
   let textContent = "";
   
-  // 处理非流式响应
-  if (jsonResponse.result?.output && Array.isArray(jsonResponse.result.output)) {
-    // 从output数组中查找文本内容
-    for (const part of jsonResponse.result.output) {
-      if (part.content && part.content.type === 'text' && part.content.text) {
-        textContent += part.content.text;
+  try {
+    // 处理非流式响应
+    if (jsonResponse.result?.output && Array.isArray(jsonResponse.result.output)) {
+      // 从output数组中查找文本内容
+      for (const part of jsonResponse.result.output) {
+        if (part.content && part.content.type === 'text' && part.content.text) {
+          textContent += part.content.text;
+        }
+      }
+    } 
+    // 处理流式响应
+    else if (jsonResponse.result?.message?.content) {
+      const content = jsonResponse.result.message.content;
+      
+      if (typeof content === 'string') {
+        textContent = content;
+      } else if (content.type === 'text') {
+        textContent = content.text || "";
+      } else if (Array.isArray(content) && content.length > 0) {
+        // 处理可能的数组格式内容
+        const textItems = content
+          .filter(item => item.type === 'text' || item.text)
+          .map(item => item.text || "");
+        textContent = textItems.join('\n');
       }
     }
-  } 
-  // 处理流式响应
-  else if (jsonResponse.result?.message?.content) {
-    const content = jsonResponse.result.message.content;
-    
-    if (typeof content === 'string') {
-      textContent = content;
-    } else if (content.type === 'text') {
-      textContent = content.text || "";
-    } else if (Array.isArray(content) && content.length > 0) {
-      // 处理可能的数组格式内容
-      const textItems = content
-        .filter(item => item.type === 'text' || item.text)
-        .map(item => item.text || "");
-      textContent = textItems.join('\n');
-    }
+  } catch (error) {
+    console.error("提取智谱清言响应文本时出错:", error);
   }
   
   return textContent;
@@ -146,12 +153,12 @@ function extractTextFromResponse(jsonResponse: any): string {
 /**
  * 发送请求到智谱清言API
  * @param userPrompt 用户提示
- * @param imageBase64 图像的Base64字符串或URL
+ * @param imageBase64 图像的Base64字符串或URL (可选)
  * @param options API选项
  */
 export async function callChatGLMApi(
   userPrompt: string,
-  imageBase64: string,
+  imageBase64: string = "",
   options: ChatGLMOptions = {}
 ): Promise<any> {
   console.log("准备向智谱清言API发送请求...");
@@ -160,14 +167,10 @@ export async function callChatGLMApi(
     // 1. 获取访问令牌
     const accessToken = await getAccessToken();
     
-    // 2. 准备图片URL，确保有正确的格式
-    const imageUrl = formatImageUrl(imageBase64);
-    
-    // 3. 准备请求体 - 符合API规范
-    const payload = {
+    // 2. 准备请求体
+    const payload: any = {
       assistant_id: ASSISTANT_ID,
       prompt: userPrompt,
-      file_list: imageBase64 ? [{ file_id: imageUrl }] : [],
       meta_data: {
         temperature: options.temperature ?? 0.7,
         top_p: options.top_p ?? 0.9,
@@ -175,9 +178,15 @@ export async function callChatGLMApi(
       }
     };
     
+    // 如果提供了图像，添加到文件列表
+    if (imageBase64) {
+      const imageUrl = formatImageUrl(imageBase64);
+      payload.file_list = [{ file_id: imageUrl }];
+    }
+    
     console.log("向智谱清言API发送请求...");
     
-    // 4. 发送API请求 - 使用非流式接口 stream_sync
+    // 3. 发送API请求 - 使用非流式接口 stream_sync
     const endpoint = options.stream ? "/stream" : "/stream_sync";
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: "POST",
@@ -196,15 +205,15 @@ export async function callChatGLMApi(
     const jsonResponse = await response.json();
     console.log("收到来自智谱清言API的响应:", jsonResponse);
     
-    // 5. 处理响应结果
+    // 4. 处理响应结果
     if (jsonResponse.status !== 0) {
       throw new Error(`智谱清言API返回错误: ${jsonResponse.message || "未知错误"}`);
     }
     
-    // 6. 从响应中提取文本内容
+    // 5. 从响应中提取文本内容
     const textContent = extractTextFromResponse(jsonResponse);
     
-    // 7. 返回处理后的响应，保持与OpenAI格式兼容
+    // 6. 返回处理后的响应，保持与OpenAI格式兼容
     return {
       choices: [
         {
