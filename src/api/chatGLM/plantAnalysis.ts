@@ -1,6 +1,6 @@
 
 /**
- * 智谱清言 (ChatGLM) 植物疾病分析
+ * 智谱AI 植物疾病分析
  */
 
 import { DiagnosisResult, EnvData } from "@/types";
@@ -8,7 +8,7 @@ import { callChatGLMApi } from "./client";
 import { parseResponseToResult, createFallbackResult } from "./parser";
 
 /**
- * 使用智谱清言分析植物图像进行疾病诊断
+ * 使用智谱AI分析植物图像进行疾病诊断
  */
 export async function analyzePlantDisease(
   imageBase64: string,
@@ -70,7 +70,7 @@ ${envDataString}
     // 解析响应为结构化结果
     return parseResponseToResult(responseText, plantType);
   } catch (error) {
-    console.error("Error calling 智谱清言 API:", error);
+    console.error("Error calling 智谱AI API:", error);
     // 在API失败的情况下返回回退数据
     return createFallbackResult(plantType, true);
   }

@@ -24,7 +24,7 @@ export const analyzePlantDisease = async (
   try {
     // 根据指定的模型类型调用相应的API
     if (modelType === 'zhipu') {
-      // 使用智谱清言模型
+      // 使用智谱AI模型 (GLM-4)
       return await chatGLMAnalyzePlantDisease(
         imageBase64,
         plantType,
@@ -74,11 +74,11 @@ export const analyzeWithMultipleModels = async (
       ).catch(error => {
         console.error("Taichu-VL模型分析失败:", error);
         taichuError = error;
-        toast.error("Taichu-VL模型分析失败，将仅使用智谱清言结果");
+        toast.error("Taichu-VL模型分析失败，将仅使用智谱AI结果");
         return null;
       }),
       
-      // 智谱清言模型
+      // 智谱AI模型
       analyzePlantDisease(
         imageBase64,
         mode,
@@ -86,9 +86,9 @@ export const analyzeWithMultipleModels = async (
         mode === 'image-and-env' ? envData : undefined,
         'zhipu'
       ).catch(error => {
-        console.error("智谱清言模型分析失败:", error);
+        console.error("智谱AI模型分析失败:", error);
         zhipuError = error;
-        toast.error("智谱清言模型分析失败，将仅使用Taichu-VL结果");
+        toast.error("智谱AI模型分析失败，将仅使用Taichu-VL结果");
         return null;
       })
     ]);

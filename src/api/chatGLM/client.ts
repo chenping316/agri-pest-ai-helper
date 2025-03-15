@@ -1,15 +1,15 @@
 
 /**
- * 智谱清言 (ChatGLM) API 客户端
- * API文档: https://chatglm.cn/chatglm/assistant-api/v1/
+ * 智谱AI API 客户端
+ * API文档: https://open.bigmodel.cn/dev/api
  */
 
-import { getAccessToken, API_CONFIG } from "./auth";
-import { formatImageUrl, extractTextFromResponse } from "./utils";
-import { ChatGLMOptions, ChatGLMResponse } from "./types";
+import { API_CONFIG } from "./auth";
+import { formatImageUrl, createMessageWithImage, extractTextFromResponse } from "./utils";
+import { ChatCompletionRequest, ChatOptions } from "./types";
 
 /**
- * 发送请求到智谱清言API
+ * 发送请求到智谱AI API
  * @param userPrompt 用户提示
  * @param imageBase64 图像的Base64字符串或URL (可选)
  * @param options API选项
@@ -17,80 +17,67 @@ import { ChatGLMOptions, ChatGLMResponse } from "./types";
 export async function callChatGLMApi(
   userPrompt: string,
   imageBase64: string = "",
-  options: ChatGLMOptions = {}
+  options: ChatOptions = {}
 ): Promise<any> {
-  console.log("准备向智谱清言API发送请求...");
+  console.log("准备向智谱AI API发送请求...");
   
   try {
-    // 1. 获取访问令牌
-    const accessToken = await getAccessToken();
-    
-    // 2. 准备请求体
-    const payload: any = {
-      assistant_id: API_CONFIG.ASSISTANT_ID,
-      prompt: userPrompt,
-      meta_data: {
-        temperature: options.temperature ?? 0.7,
-        top_p: options.top_p ?? 0.9,
-        max_tokens: options.max_tokens ?? 2000
-      }
+    // 准备请求体
+    const payload: ChatCompletionRequest = {
+      model: options.stream ? "glm-4-plus-vision" : "glm-4-plus",
+      messages: [],
+      temperature: options.temperature ?? 0.7,
+      top_p: options.top_p ?? 0.9,
+      max_tokens: options.max_tokens ?? 2000,
+      stream: options.stream ?? false
     };
     
-    // 如果提供了图像，添加到文件列表
+    // 如果提供了图像，添加包含图像的消息
     if (imageBase64) {
-      const imageUrl = formatImageUrl(imageBase64);
-      payload.file_list = [{ file_id: imageUrl }];
+      payload.model = "glm-4-plus-vision"; // 使用支持图像的模型
+      payload.messages = [
+        {
+          role: "user",
+          content: createMessageWithImage(userPrompt, imageBase64)
+        }
+      ];
+    } else {
+      // 纯文本消息
+      payload.messages = [
+        {
+          role: "user",
+          content: userPrompt
+        }
+      ];
     }
     
-    console.log("向智谱清言API发送请求...");
+    console.log("向智谱AI API发送请求, 使用模型:", payload.model);
     
-    // 3. 发送API请求 - 使用非流式接口 stream_sync
-    const endpoint = options.stream ? "/stream" : "/stream_sync";
-    const response = await fetch(`${API_CONFIG.BASE_URL}${endpoint}`, {
+    // 发送API请求
+    const response = await fetch(`${API_CONFIG.BASE_URL}/chat/completions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${accessToken}`
+        "Authorization": `Bearer ${API_CONFIG.API_KEY}`
       },
       body: JSON.stringify(payload)
     });
     
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`智谱清言API请求失败: ${response.status} - ${errorText}`);
+      throw new Error(`智谱AI API请求失败: ${response.status} - ${errorText}`);
     }
     
     const jsonResponse = await response.json();
-    console.log("收到来自智谱清言API的响应:", jsonResponse);
+    console.log("收到来自智谱AI API的响应:", jsonResponse);
     
-    // 4. 处理响应结果
-    if (jsonResponse.status !== 0) {
-      throw new Error(`智谱清言API返回错误: ${jsonResponse.message || "未知错误"}`);
-    }
-    
-    // 5. 从响应中提取文本内容
-    const textContent = extractTextFromResponse(jsonResponse);
-    
-    // 6. 返回处理后的响应，保持与OpenAI格式兼容
+    // 直接返回API响应，保持与OpenAI格式兼容性
     return {
-      choices: [
-        {
-          message: {
-            role: "assistant",
-            content: textContent
-          },
-          finish_reason: "stop"
-        }
-      ],
-      usage: {
-        prompt_tokens: 0,
-        completion_tokens: 0,
-        total_tokens: 0
-      },
-      model: "智谱清言" // 添加模型名称
+      ...jsonResponse,
+      model: jsonResponse.model || payload.model
     };
   } catch (error) {
-    console.error("调用智谱清言API时出错:", error);
+    console.error("调用智谱AI API时出错:", error);
     throw error;
   }
 }

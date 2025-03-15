@@ -1,40 +1,61 @@
 
 /**
- * 智谱清言 (ChatGLM) API 类型定义
+ * 智谱AI API 类型定义
  */
 
-// API请求选项接口
-export interface ChatGLMOptions {
+// 消息类型
+export interface ChatMessage {
+  role: "user" | "assistant" | "system";
+  content: string | {
+    type: string;
+    text?: string;
+    image_url?: {
+      url: string;
+    };
+  }[];
+}
+
+// API请求选项
+export interface ChatOptions {
   temperature?: number;
   top_p?: number;
   max_tokens?: number;
   stream?: boolean;
 }
 
-// 消息接口类型定义
-export interface ChatGLMMessage {
-  role: string;
-  content: string | {
-    text?: string;
-    image_url?: string;
-  }[];
+// API请求体
+export interface ChatCompletionRequest {
+  model: string;
+  messages: ChatMessage[];
+  temperature?: number;
+  top_p?: number;
+  max_tokens?: number;
+  stream?: boolean;
 }
 
-// API响应接口
-export interface ChatGLMResponse {
-  status: number;
-  message?: string;
-  result?: {
-    history_id: string;
-    conversation_id: string;
-    output?: any[];
-    message?: {
-      role: string;
-      content: any;
-      status: string;
-      created_at: string;
-    };
-    created_at: string;
-    status: string;
+// API响应中的选择项
+export interface ChatCompletionChoice {
+  finish_reason: string;
+  index: number;
+  message: {
+    content: string;
+    role: string;
   };
+}
+
+// 使用量统计
+export interface ChatCompletionUsage {
+  completion_tokens: number;
+  prompt_tokens: number;
+  total_tokens: number;
+}
+
+// API完整响应
+export interface ChatCompletionResponse {
+  created: number;
+  id: string;
+  model: string;
+  request_id: string;
+  choices: ChatCompletionChoice[];
+  usage: ChatCompletionUsage;
 }

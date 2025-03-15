@@ -1,10 +1,10 @@
 
 /**
- * 智谱清言 (ChatGLM) API 工具函数
+ * 智谱AI API 工具函数
  */
 
 /**
- * 格式化图像URL
+ * 格式化图像URL为API所需格式
  * @param imageBase64 图像的Base64字符串或URL
  */
 export function formatImageUrl(imageBase64: string): string {
@@ -17,41 +17,37 @@ export function formatImageUrl(imageBase64: string): string {
 }
 
 /**
- * 从响应中提取文本内容
- * @param jsonResponse API响应
+ * 创建包含图像的消息内容
+ * @param text 文本内容
+ * @param imageUrl 图像URL
  */
-export function extractTextFromResponse(jsonResponse: any): string {
-  let textContent = "";
-  
-  try {
-    // 处理非流式响应
-    if (jsonResponse.result?.output && Array.isArray(jsonResponse.result.output)) {
-      // 从output数组中查找文本内容
-      for (const part of jsonResponse.result.output) {
-        if (part.content && part.content.type === 'text' && part.content.text) {
-          textContent += part.content.text;
-        }
-      }
-    } 
-    // 处理流式响应
-    else if (jsonResponse.result?.message?.content) {
-      const content = jsonResponse.result.message.content;
-      
-      if (typeof content === 'string') {
-        textContent = content;
-      } else if (content.type === 'text') {
-        textContent = content.text || "";
-      } else if (Array.isArray(content) && content.length > 0) {
-        // 处理可能的数组格式内容
-        const textItems = content
-          .filter(item => item.type === 'text' || item.text)
-          .map(item => item.text || "");
-        textContent = textItems.join('\n');
+export function createMessageWithImage(text: string, imageUrl: string) {
+  return [
+    {
+      type: "text",
+      text: text
+    },
+    {
+      type: "image_url",
+      image_url: {
+        url: formatImageUrl(imageUrl)
       }
     }
+  ];
+}
+
+/**
+ * 从API响应中提取文本内容
+ * @param response API响应
+ */
+export function extractTextFromResponse(response: any): string {
+  try {
+    if (response?.choices && response.choices.length > 0) {
+      return response.choices[0].message.content || "";
+    }
+    return "";
   } catch (error) {
-    console.error("提取智谱清言响应文本时出错:", error);
+    console.error("提取智谱AI响应文本时出错:", error);
+    return "";
   }
-  
-  return textContent;
 }

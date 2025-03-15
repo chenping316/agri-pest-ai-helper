@@ -23,7 +23,7 @@ const ResultActions: React.FC<ResultActionsProps> = ({
     if (!diagnosisResult) return null;
     
     if (isNetworkError) {
-      return diagnosisResult.name.includes("智谱清言") ? "智谱清言" : "Taichu-VL";
+      return diagnosisResult.name.includes("智谱AI") ? "智谱AI (GLM-4)" : "Taichu-VL";
     }
     
     // 根据置信度精确值判断是否为多模型分析
@@ -33,7 +33,7 @@ const ResultActions: React.FC<ResultActionsProps> = ({
                          !confidence.toString().endsWith("0") &&
                          confidence > 0.6;
     
-    return isMultiModel ? "多模型混合" : diagnosisResult.name.includes("智谱清言") ? "智谱清言" : "Taichu-VL";
+    return isMultiModel ? "多模型混合" : diagnosisResult.name.includes("智谱AI") ? "智谱AI (GLM-4)" : "Taichu-VL";
   };
   
   const modelSource = getModelSource();
