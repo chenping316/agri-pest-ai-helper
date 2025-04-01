@@ -55,14 +55,13 @@ ${envDataString}
    - 估计价格
    - 预期效果`;
 
-    // 调用API
+    // 调用API - 修正这里，不传递model参数，而是使用API_CONFIG中的VISION_MODEL
     const apiResponse = await callChatGLMApi(
       userPrompt,
       base64Image,
       {
         temperature: 0.7,
-        max_tokens: 2000,
-        model: API_CONFIG.VISION_MODEL
+        max_tokens: 2000
       }
     );
     
