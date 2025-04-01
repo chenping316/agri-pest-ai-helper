@@ -14,8 +14,11 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
   const { bluetoothDevices, manualEnvDataMode } = useAppContext();
   
   // Check if there's a qiongshuAI device in the list
-  const qiongshuDevice = bluetoothDevices.find(device => device.name.includes("qiongshuAI"));
-  const qiongshuConnected = qiongshuDevice?.connected || false;
+  const qiongshuDevice = bluetoothDevices.find(device => 
+    device.name.includes("qiongshuAI") && device.connected
+  );
+  
+  const qiongshuConnected = !!qiongshuDevice;
   
   return (
     <div className="mb-6">
@@ -23,10 +26,11 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
         <Badge 
           variant="outline" 
           className={
-            manualEnvDataMode ? "bg-blue-100 text-blue-800" :
+            manualEnvDataMode ? "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300" :
             isBluetoothConnected ? 
-              qiongshuConnected ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-800"
-            : "bg-red-100 text-red-800"
+              qiongshuConnected ? "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300" 
+                                : "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300"
+            : "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300"
           }
         >
           {manualEnvDataMode ? (
@@ -36,7 +40,7 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
             </>
           ) : isBluetoothConnected ? (
             <>
-              <Wifi className="h-3 w-3 mr-1 animate-pulse-green" />
+              <Wifi className="h-3 w-3 mr-1 animate-pulse" />
               {qiongshuConnected ? "已连接青书AI设备" : "已连接普通设备"}
             </>
           ) : (
@@ -63,7 +67,7 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
         <div className="text-sm bg-amber-50 border border-amber-200 rounded p-3 text-amber-800 dark:bg-amber-900/20 dark:border-amber-800 dark:text-amber-300">
           <p className="flex items-center">
             <AlertCircle className="h-4 w-4 mr-2 flex-shrink-0" />
-            无法检测到青书AI设备，请打开蓝牙并重新连接，或者启用手动输入模式。
+            未检测到蓝牙设备连接，请在设备页启用蓝牙并连接青书AI设备，或者启用手动输入模式。
           </p>
         </div>
       )}

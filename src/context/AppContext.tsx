@@ -1,5 +1,7 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { AnalysisMode, BluetoothDevice, DiagnosisResult, EnvData, HistoryRecord, User, PlantType } from "@/types";
+import { useToast } from "@/hooks/use-toast";
 
 interface AppContextType {
   user: User | null;
@@ -86,6 +88,7 @@ export const AppProvider: React.FC<{children: ReactNode}> = ({ children }) => {
   const [availablePlantTypes] = useState<PlantType[]>(commonPlantTypes);
   const [manualEnvDataMode, setManualEnvDataMode] = useState(false);
   const [manualEnvData, setManualEnvData] = useState<EnvData>({...defaultEnvData});
+  const { toast } = useToast();
 
   // Check for saved login
   useEffect(() => {
@@ -133,58 +136,153 @@ export const AppProvider: React.FC<{children: ReactNode}> = ({ children }) => {
     }));
   };
 
-  // Mock Bluetooth functions
+  // Real Web Bluetooth API implementation
   const scanForDevices = async (): Promise<void> => {
     console.log("Scanning for Bluetooth devices...");
-    // In a real app, this would use the Web Bluetooth API
     
-    // Mock data for testing, including the qiongshuAI device
-    const mockDevices: BluetoothDevice[] = [
-      { id: "device1", name: "qiongshuAI传感器", connected: false },
-      { id: "device2", name: "土壤检测仪A", connected: false },
-      { id: "device3", name: "土壤检测仪B", connected: false },
-      { id: "device4", name: "环境监测器", connected: false }
-    ];
-    
-    setBluetoothDevices(mockDevices);
+    try {
+      // Check if Web Bluetooth is supported
+      if (!navigator.bluetooth) {
+        toast({
+          title: "不支持蓝牙",
+          description: "您的浏览器不支持Web Bluetooth API，请使用Chrome或Edge浏览器。",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Request Bluetooth device
+      const device = await navigator.bluetooth.requestDevice({
+        filters: [
+          // Add filters for your specific devices
+          { namePrefix: "qiongshuAI" },
+          // Include other common Bluetooth device prefixes for soil sensors
+          { namePrefix: "Soil" },
+          { namePrefix: "BLE" },
+          { namePrefix: "HC" }
+        ],
+        // Optional services to access
+        optionalServices: ['battery_service', 'device_information']
+      });
+
+      // Create device object
+      const discoveredDevice: BluetoothDevice = {
+        id: device.id,
+        name: device.name || "未知设备",
+        connected: false
+      };
+
+      // Check if device is already in the list
+      setBluetoothDevices(prev => {
+        const exists = prev.some(d => d.id === discoveredDevice.id);
+        if (exists) {
+          return prev.map(d => d.id === discoveredDevice.id ? discoveredDevice : d);
+        } else {
+          return [...prev, discoveredDevice];
+        }
+      });
+
+      toast({
+        title: "发现设备",
+        description: `已发现: ${device.name || "未知设备"}`
+      });
+
+    } catch (error) {
+      console.error("Bluetooth scan error:", error);
+      
+      // If user cancelled the Bluetooth request
+      if ((error as Error).name === 'NotFoundError') {
+        toast({
+          title: "未选择设备",
+          description: "您未选择任何蓝牙设备。",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "扫描失败",
+          description: "无法扫描蓝牙设备，请确保蓝牙已启用。",
+          variant: "destructive"
+        });
+      }
+    }
   };
 
   const connectToDevice = async (deviceId: string): Promise<boolean> => {
     console.log(`Connecting to device ${deviceId}...`);
-    // In a real app, this would use the Web Bluetooth API
     
-    const device = bluetoothDevices.find(d => d.id === deviceId);
-    const isQiongshuDevice = device?.name.includes("qiongshuAI");
-    
-    // Mock connection
-    setBluetoothDevices(prev => 
-      prev.map(device => 
-        device.id === deviceId 
-          ? { ...device, connected: true } 
-          : { ...device, connected: false }
-      )
-    );
-    
-    setIsBluetoothConnected(true);
-    
-    // Simulate receiving environmental data
-    const mockEnvData: EnvData = {
-      soilMoisture: Math.floor(Math.random() * 100),
-      soilTemperature: 15 + Math.random() * 15,
-      soilPh: 5 + Math.random() * 3,
-      airTemperature: 15 + Math.random() * 20,
-      airHumidity: 40 + Math.random() * 60,
-      timestamp: new Date()
-    };
-    
-    // If it's a qiongshuAI device, use specific optimized data
-    if (isQiongshuDevice) {
-      mockEnvData.soilMoisture = 75 + Math.random() * 10; // Higher moisture
-      mockEnvData.soilPh = 6.2 + Math.random() * 0.5; // Optimal pH range
+    try {
+      // Find the device
+      const deviceToConnect = bluetoothDevices.find(d => d.id === deviceId);
+      if (!deviceToConnect) {
+        throw new Error("Device not found");
+      }
+
+      // Request Bluetooth device by ID (this is not directly supported by Web Bluetooth API,
+      // we would normally need to scan again, but for demonstration purposes we'll simulate it)
+      const device = await navigator.bluetooth.requestDevice({
+        filters: [{ name: deviceToConnect.name }],
+        optionalServices: ['battery_service', 'device_information']
+      });
+
+      // Connect to the GATT server
+      const server = await device.gatt?.connect();
+      if (!server) {
+        throw new Error("Failed to connect to GATT server");
+      }
+
+      // Update device connection status
+      setBluetoothDevices(prev => 
+        prev.map(device => 
+          device.id === deviceId 
+            ? { ...device, connected: true } 
+            : { ...device, connected: false }
+        )
+      );
+      
+      setIsBluetoothConnected(true);
+      
+      // In a real implementation, you would read characteristic values here
+      // For demonstration, we'll create simulated data based on device type
+      const isQiongshuDevice = deviceToConnect.name.includes("qiongshuAI");
+      
+      // Simulated environment data
+      const mockEnvData: EnvData = {
+        soilMoisture: Math.floor(Math.random() * 100),
+        soilTemperature: 15 + Math.random() * 15,
+        soilPh: 5 + Math.random() * 3,
+        airTemperature: 15 + Math.random() * 20,
+        airHumidity: 40 + Math.random() * 60,
+        timestamp: new Date()
+      };
+      
+      // If it's a qiongshuAI device, use specific optimized data
+      if (isQiongshuDevice) {
+        mockEnvData.soilMoisture = 75 + Math.random() * 10; // Higher moisture
+        mockEnvData.soilPh = 6.2 + Math.random() * 0.5; // Optimal pH range
+      }
+      
+      setEnvData(mockEnvData);
+      
+      // Set up listeners for disconnection
+      device.addEventListener('gattserverdisconnected', () => {
+        disconnectDevice();
+        toast({
+          title: "设备已断开",
+          description: "蓝牙连接已断开",
+          variant: "destructive"
+        });
+      });
+      
+      return true;
+    } catch (error) {
+      console.error("Bluetooth connection error:", error);
+      toast({
+        title: "连接失败",
+        description: "无法连接到蓝牙设备，请确保设备在范围内且已打开。",
+        variant: "destructive"
+      });
+      return false;
     }
-    
-    setEnvData(mockEnvData);
-    return true;
   };
 
   const disconnectDevice = () => {

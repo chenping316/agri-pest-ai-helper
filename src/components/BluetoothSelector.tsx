@@ -102,7 +102,16 @@ const BluetoothSelector: React.FC = () => {
       
       <Separator />
       
-      {!hasQiongshuDevice && (
+      {bluetoothDevices.length === 0 && (
+        <div className="p-4 border border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800 rounded-md flex items-center">
+          <AlertCircle className="text-amber-600 dark:text-amber-400 h-5 w-5 mr-2 flex-shrink-0" />
+          <div className="text-amber-800 dark:text-amber-300 text-sm">
+            未检测到任何蓝牙设备，请确保蓝牙已开启并在有效范围内，然后点击"扫描设备"重试。
+          </div>
+        </div>
+      )}
+      
+      {bluetoothDevices.length > 0 && !hasQiongshuDevice && (
         <div className="p-4 border border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800 rounded-md flex items-center">
           <AlertCircle className="text-amber-600 dark:text-amber-400 h-5 w-5 mr-2 flex-shrink-0" />
           <div className="text-amber-800 dark:text-amber-300 text-sm">
