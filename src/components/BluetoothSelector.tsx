@@ -1,11 +1,13 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Bluetooth, RefreshCw, Check, X } from "lucide-react";
+import { Bluetooth, RefreshCw, Check, X, AlertCircle } from "lucide-react";
 import { useAppContext } from "@/context/AppContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 const BluetoothSelector: React.FC = () => {
   const { 
@@ -14,10 +16,22 @@ const BluetoothSelector: React.FC = () => {
     scanForDevices, 
     connectToDevice,
     disconnectDevice,
-    envData
+    envData,
+    manualEnvDataMode,
+    setManualEnvDataMode,
+    updateManualEnvData,
+    manualEnvData
   } = useAppContext();
+  
   const [isScanning, setIsScanning] = useState(false);
+  const [hasQiongshuDevice, setHasQiongshuDevice] = useState(false);
   const { toast } = useToast();
+
+  useEffect(() => {
+    // 检查是否有名为 qiongshuAI 的设备
+    const qiongshuDevice = bluetoothDevices.find(device => device.name.includes("qiongshuAI"));
+    setHasQiongshuDevice(!!qiongshuDevice);
+  }, [bluetoothDevices]);
 
   const handleScan = async () => {
     setIsScanning(true);
@@ -64,6 +78,13 @@ const BluetoothSelector: React.FC = () => {
     });
   };
 
+  const handleManualInputChange = (field: keyof typeof manualEnvData, value: string) => {
+    const numValue = parseFloat(value);
+    if (!isNaN(numValue)) {
+      updateManualEnvData(field, numValue);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -81,26 +102,46 @@ const BluetoothSelector: React.FC = () => {
       
       <Separator />
       
+      {!hasQiongshuDevice && (
+        <div className="p-4 border border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800 rounded-md flex items-center">
+          <AlertCircle className="text-amber-600 dark:text-amber-400 h-5 w-5 mr-2 flex-shrink-0" />
+          <div className="text-amber-800 dark:text-amber-300 text-sm">
+            无法检测到 qiongshuAI 设备，请确保蓝牙已开启并在有效范围内，然后点击"扫描设备"重试。
+          </div>
+        </div>
+      )}
+      
       {bluetoothDevices.length > 0 ? (
         <div className="space-y-3">
           {bluetoothDevices.map((device) => (
             <div 
               key={device.id}
-              className="flex items-center justify-between p-3 bg-muted/50 rounded-md"
+              className={`flex items-center justify-between p-3 rounded-md ${
+                device.name.includes("qiongshuAI") 
+                  ? "bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800" 
+                  : "bg-muted/50"
+              }`}
             >
               <div className="flex items-center">
-                <Bluetooth className="h-4 w-4 mr-2 text-primary" />
+                <Bluetooth className={`h-4 w-4 mr-2 ${
+                  device.name.includes("qiongshuAI") ? "text-green-600" : "text-primary"
+                }`} />
                 <span>{device.name}</span>
                 {device.connected && (
                   <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full dark:bg-green-800 dark:text-green-100">
                     已连接
                   </span>
                 )}
+                {device.name.includes("qiongshuAI") && !device.connected && (
+                  <span className="ml-2 text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full dark:bg-amber-800 dark:text-amber-100">
+                    推荐连接
+                  </span>
+                )}
               </div>
               
               <Button
                 size="sm"
-                variant={device.connected ? "destructive" : "default"}
+                variant={device.connected ? "destructive" : device.name.includes("qiongshuAI") ? "default" : "outline"}
                 onClick={() => device.connected ? handleDisconnect() : handleConnect(device.id)}
               >
                 {device.connected ? (
@@ -124,7 +165,82 @@ const BluetoothSelector: React.FC = () => {
         </div>
       )}
       
-      {envData && (
+      <div className="flex items-center space-x-2 mt-4">
+        <Label htmlFor="manual-mode" className="cursor-pointer">手动输入模式</Label>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={() => setManualEnvDataMode(!manualEnvDataMode)}
+          className={manualEnvDataMode ? "bg-primary text-primary-foreground hover:bg-primary/90" : ""}
+        >
+          {manualEnvDataMode ? "已启用" : "未启用"}
+        </Button>
+      </div>
+      
+      {manualEnvDataMode && (
+        <Card className="mt-2">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">手动输入环境数据</CardTitle>
+            <CardDescription>在无法连接到设备时使用此模式</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="soilMoisture">土壤湿度 (%)</Label>
+                <Input 
+                  id="soilMoisture" 
+                  type="number" 
+                  placeholder="0-100" 
+                  value={manualEnvData.soilMoisture.toString()} 
+                  onChange={(e) => handleManualInputChange('soilMoisture', e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="soilTemperature">土壤温度 (°C)</Label>
+                <Input 
+                  id="soilTemperature" 
+                  type="number" 
+                  placeholder="0-50" 
+                  value={manualEnvData.soilTemperature.toString()} 
+                  onChange={(e) => handleManualInputChange('soilTemperature', e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="soilPh">土壤pH值</Label>
+                <Input 
+                  id="soilPh" 
+                  type="number" 
+                  placeholder="0-14" 
+                  value={manualEnvData.soilPh.toString()} 
+                  onChange={(e) => handleManualInputChange('soilPh', e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="airTemperature">空气温度 (°C)</Label>
+                <Input 
+                  id="airTemperature" 
+                  type="number" 
+                  placeholder="0-50" 
+                  value={manualEnvData.airTemperature.toString()} 
+                  onChange={(e) => handleManualInputChange('airTemperature', e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="airHumidity">空气湿度 (%)</Label>
+                <Input 
+                  id="airHumidity" 
+                  type="number" 
+                  placeholder="0-100" 
+                  value={manualEnvData.airHumidity.toString()} 
+                  onChange={(e) => handleManualInputChange('airHumidity', e.target.value)}
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+      
+      {envData && !manualEnvDataMode && (
         <Card className="mt-4">
           <CardHeader className="pb-2">
             <CardTitle className="text-base">环境数据</CardTitle>

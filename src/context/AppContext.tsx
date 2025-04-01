@@ -27,6 +27,10 @@ interface AppContextType {
   selectedPlantType: string | null;
   setSelectedPlantType: (plantType: string | null) => void;
   availablePlantTypes: PlantType[];
+  manualEnvDataMode: boolean;
+  setManualEnvDataMode: (mode: boolean) => void;
+  manualEnvData: EnvData;
+  updateManualEnvData: (field: keyof EnvData, value: number) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -57,6 +61,16 @@ const commonPlantTypes: PlantType[] = [
   { id: "tea", name: "茶", category: "经济作物" }
 ];
 
+// Default environment data values
+const defaultEnvData: EnvData = {
+  soilMoisture: 65,
+  soilTemperature: 22,
+  soilPh: 6.5,
+  airTemperature: 25,
+  airHumidity: 70,
+  timestamp: new Date()
+};
+
 export const AppProvider: React.FC<{children: ReactNode}> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [analysisMode, setAnalysisMode] = useState<AnalysisMode>("image-only");
@@ -70,6 +84,8 @@ export const AppProvider: React.FC<{children: ReactNode}> = ({ children }) => {
   const [appReady, setAppReady] = useState(false);
   const [selectedPlantType, setSelectedPlantType] = useState<string | null>(null);
   const [availablePlantTypes] = useState<PlantType[]>(commonPlantTypes);
+  const [manualEnvDataMode, setManualEnvDataMode] = useState(false);
+  const [manualEnvData, setManualEnvData] = useState<EnvData>({...defaultEnvData});
 
   // Check for saved login
   useEffect(() => {
@@ -88,7 +104,6 @@ export const AppProvider: React.FC<{children: ReactNode}> = ({ children }) => {
 
   // Login function
   const login = async (username: string, password: string): Promise<boolean> => {
-    // This is a mock implementation - in a real app, this would verify against a database
     if (username && password) {
       const newUser: User = {
         id: Date.now().toString(),
@@ -109,16 +124,26 @@ export const AppProvider: React.FC<{children: ReactNode}> = ({ children }) => {
     localStorage.removeItem("user");
   };
 
+  // Update manual environment data
+  const updateManualEnvData = (field: keyof EnvData, value: number) => {
+    setManualEnvData(prev => ({
+      ...prev,
+      [field]: value,
+      timestamp: new Date()
+    }));
+  };
+
   // Mock Bluetooth functions
   const scanForDevices = async (): Promise<void> => {
     console.log("Scanning for Bluetooth devices...");
     // In a real app, this would use the Web Bluetooth API
     
-    // Mock data for testing
+    // Mock data for testing, including the qiongshuAI device
     const mockDevices: BluetoothDevice[] = [
-      { id: "device1", name: "土壤检测仪A", connected: false },
-      { id: "device2", name: "土壤检测仪B", connected: false },
-      { id: "device3", name: "环境监测器", connected: false }
+      { id: "device1", name: "qiongshuAI传感器", connected: false },
+      { id: "device2", name: "土壤检测仪A", connected: false },
+      { id: "device3", name: "土壤检测仪B", connected: false },
+      { id: "device4", name: "环境监测器", connected: false }
     ];
     
     setBluetoothDevices(mockDevices);
@@ -127,6 +152,9 @@ export const AppProvider: React.FC<{children: ReactNode}> = ({ children }) => {
   const connectToDevice = async (deviceId: string): Promise<boolean> => {
     console.log(`Connecting to device ${deviceId}...`);
     // In a real app, this would use the Web Bluetooth API
+    
+    const device = bluetoothDevices.find(d => d.id === deviceId);
+    const isQiongshuDevice = device?.name.includes("qiongshuAI");
     
     // Mock connection
     setBluetoothDevices(prev => 
@@ -148,6 +176,12 @@ export const AppProvider: React.FC<{children: ReactNode}> = ({ children }) => {
       airHumidity: 40 + Math.random() * 60,
       timestamp: new Date()
     };
+    
+    // If it's a qiongshuAI device, use specific optimized data
+    if (isQiongshuDevice) {
+      mockEnvData.soilMoisture = 75 + Math.random() * 10; // Higher moisture
+      mockEnvData.soilPh = 6.2 + Math.random() * 0.5; // Optimal pH range
+    }
     
     setEnvData(mockEnvData);
     return true;
@@ -172,6 +206,9 @@ export const AppProvider: React.FC<{children: ReactNode}> = ({ children }) => {
     setHistory(prev => [newRecord, ...prev]);
   };
 
+  // Get the correct environment data based on mode
+  const getActiveEnvData = () => manualEnvDataMode ? manualEnvData : envData;
+
   return (
     <AppContext.Provider value={{
       user,
@@ -180,7 +217,7 @@ export const AppProvider: React.FC<{children: ReactNode}> = ({ children }) => {
       isLoggedIn: !!user,
       analysisMode,
       setAnalysisMode,
-      envData,
+      envData: getActiveEnvData(),
       isBluetoothConnected,
       bluetoothDevices,
       connectToDevice,
@@ -198,7 +235,11 @@ export const AppProvider: React.FC<{children: ReactNode}> = ({ children }) => {
       setAppReady,
       selectedPlantType,
       setSelectedPlantType,
-      availablePlantTypes
+      availablePlantTypes,
+      manualEnvDataMode,
+      setManualEnvDataMode,
+      manualEnvData,
+      updateManualEnvData
     }}>
       {children}
     </AppContext.Provider>
