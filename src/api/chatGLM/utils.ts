@@ -51,3 +51,11 @@ export function extractTextFromResponse(response: any): string {
     return "";
   }
 }
+
+/**
+ * 生成随机请求ID
+ */
+export function generateRequestId(): string {
+  return Math.random().toString(36).substring(2, 15) + 
+         Math.random().toString(36).substring(2, 15);
+}

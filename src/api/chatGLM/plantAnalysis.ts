@@ -6,6 +6,7 @@
 import { DiagnosisResult, EnvData } from "@/types";
 import { callChatGLMApi } from "./client";
 import { parseResponseToResult, createFallbackResult } from "./parser";
+import { API_CONFIG } from "./auth";
 
 /**
  * 使用智谱AI分析植物图像进行疾病诊断
@@ -60,7 +61,8 @@ ${envDataString}
       base64Image,
       {
         temperature: 0.7,
-        max_tokens: 2000
+        max_tokens: 2000,
+        model: API_CONFIG.VISION_MODEL
       }
     );
     
