@@ -23,17 +23,26 @@ const ResultActions: React.FC<ResultActionsProps> = ({
     if (!diagnosisResult) return null;
     
     if (isNetworkError) {
-      return diagnosisResult.name.includes("智谱AI") ? "智谱AI (GLM-4)" : "Taichu-VL";
+      if (diagnosisResult.name.includes("智谱AI")) return "智谱AI (GLM-4)";
+      if (diagnosisResult.name.includes("讯飞星火")) return "讯飞星火";
+      return "Taichu-VL";
     }
     
     // 根据置信度精确值判断是否为多模型分析
-    // 多模型分析会对置信度进行调整，例如取平均值加0.1
+    // 多模型分析会对置信度进行调整，例如取平均值加0.1或0.15
     const confidence = diagnosisResult.confidence;
-    const isMultiModel = confidence.toString().length > 3 && 
+    const isTripleModel = confidence.toString().length > 3 && 
+                         confidence > 0.85;
+    const isDoubleModel = confidence.toString().length > 3 && 
                          !confidence.toString().endsWith("0") &&
-                         confidence > 0.6;
+                         confidence > 0.6 && confidence <= 0.85;
     
-    return isMultiModel ? "多模型混合" : diagnosisResult.name.includes("智谱AI") ? "智谱AI (GLM-4)" : "Taichu-VL";
+    if (isTripleModel) return "三模型混合";
+    if (isDoubleModel) return "双模型混合";
+    
+    if (diagnosisResult.name.includes("智谱AI")) return "智谱AI (GLM-4)";
+    if (diagnosisResult.name.includes("讯飞星火")) return "讯飞星火";
+    return "Taichu-VL";
   };
   
   const modelSource = getModelSource();

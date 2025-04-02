@@ -2,12 +2,13 @@
 import { AnalysisMode, DiagnosisResult, EnvData } from "@/types";
 import { analyzePlantDisease as taichuAnalyzePlantDisease } from "@/api/taichuVL/plantAnalysis";
 import { analyzePlantDisease as chatGLMAnalyzePlantDisease } from "@/api/chatGLM/plantAnalysis";
+import { analyzePlantDisease as sparkAnalyzePlantDisease } from "@/api/sparkAI/plantAnalysis";
 import { toast } from "sonner";
 
 /**
  * 定义分析模型类型
  */
-export type AnalysisModelType = 'taichu' | 'zhipu' | 'multi';
+export type AnalysisModelType = 'taichu' | 'zhipu' | 'spark' | 'multi';
 
 /**
  * 使用单一模型分析植物疾病的函数
@@ -23,20 +24,28 @@ export const analyzePlantDisease = async (
   
   try {
     // 根据指定的模型类型调用相应的API
-    if (modelType === 'zhipu') {
-      // 使用智谱AI模型 (GLM-4)
-      return await chatGLMAnalyzePlantDisease(
-        imageBase64,
-        plantType,
-        mode === 'image-and-env' ? envData : undefined
-      );
-    } else {
-      // 默认使用Taichu-VL模型
-      return await taichuAnalyzePlantDisease(
-        imageBase64,
-        plantType,
-        mode === 'image-and-env' ? envData : undefined
-      );
+    switch (modelType) {
+      case 'zhipu':
+        // 使用智谱AI模型 (GLM-4)
+        return await chatGLMAnalyzePlantDisease(
+          imageBase64,
+          plantType,
+          mode === 'image-and-env' ? envData : undefined
+        );
+      case 'spark':
+        // 使用讯飞星火大模型
+        return await sparkAnalyzePlantDisease(
+          imageBase64,
+          plantType,
+          mode === 'image-and-env' ? envData : undefined
+        );
+      default:
+        // 默认使用Taichu-VL模型
+        return await taichuAnalyzePlantDisease(
+          imageBase64,
+          plantType,
+          mode === 'image-and-env' ? envData : undefined
+        );
     }
   } catch (error) {
     console.error(`${modelType}模型分析出错:`, error);
@@ -60,10 +69,12 @@ export const analyzeWithMultipleModels = async (
   let taichuError: any = null;
   let zhipuResult: DiagnosisResult | null = null;
   let zhipuError: any = null;
+  let sparkResult: DiagnosisResult | null = null;
+  let sparkError: any = null;
   
   try {
-    // 并行调用两个模型API以减少等待时间
-    [taichuResult, zhipuResult] = await Promise.all([
+    // 并行调用三个模型API以减少等待时间
+    [taichuResult, zhipuResult, sparkResult] = await Promise.all([
       // Taichu-VL 模型
       analyzePlantDisease(
         imageBase64,
@@ -74,7 +85,7 @@ export const analyzeWithMultipleModels = async (
       ).catch(error => {
         console.error("Taichu-VL模型分析失败:", error);
         taichuError = error;
-        toast.error("Taichu-VL模型分析失败，将仅使用智谱AI结果");
+        toast.error("Taichu-VL模型分析失败，将使用其他模型结果");
         return null;
       }),
       
@@ -88,24 +99,47 @@ export const analyzeWithMultipleModels = async (
       ).catch(error => {
         console.error("智谱AI模型分析失败:", error);
         zhipuError = error;
-        toast.error("智谱AI模型分析失败，将仅使用Taichu-VL结果");
+        toast.error("智谱AI模型分析失败，将使用其他模型结果");
+        return null;
+      }),
+      
+      // 讯飞星火模型
+      analyzePlantDisease(
+        imageBase64,
+        mode,
+        plantType,
+        mode === 'image-and-env' ? envData : undefined,
+        'spark'
+      ).catch(error => {
+        console.error("讯飞星火模型分析失败:", error);
+        sparkError = error;
+        toast.error("讯飞星火模型分析失败，将使用其他模型结果");
         return null;
       })
     ]);
     
-    // 如果两个模型都失败，抛出组合错误
-    if (!taichuResult && !zhipuResult) {
+    // 统计成功的模型数量
+    const successfulResults = [taichuResult, zhipuResult, sparkResult].filter(Boolean);
+    
+    // 如果所有模型都失败，抛出组合错误
+    if (successfulResults.length === 0) {
       const errorMessage = "所有模型分析都失败了";
-      console.error(errorMessage, {taichuError, zhipuError});
+      console.error(errorMessage, {taichuError, zhipuError, sparkError});
       throw new Error(errorMessage);
     }
     
     // 如果只有一个模型成功，返回成功的那个结果
-    if (!taichuResult) return zhipuResult!;
-    if (!zhipuResult) return taichuResult;
+    if (successfulResults.length === 1) {
+      return successfulResults[0]!;
+    }
     
-    // 综合两个模型的结果
-    return combineResults(taichuResult, zhipuResult);
+    // 如果有两个模型成功，使用两个模型的结果
+    if (successfulResults.length === 2) {
+      return combineResults(successfulResults[0]!, successfulResults[1]!);
+    }
+    
+    // 如果三个模型都成功，综合三个模型的结果
+    return combineTripleResults(taichuResult!, zhipuResult!, sparkResult!);
   } catch (error) {
     console.error("多模型分析出错:", error);
     throw error;
@@ -116,7 +150,7 @@ export const analyzeWithMultipleModels = async (
  * 综合两个模型的分析结果
  */
 function combineResults(result1: DiagnosisResult, result2: DiagnosisResult): DiagnosisResult {
-  console.log("综合多个模型的分析结果");
+  console.log("综合两个模型的分析结果");
   
   // 如果疾病名称相同，增加置信度，否则选择置信度较高的
   const useResult1 = 
@@ -159,6 +193,87 @@ function combineResults(result1: DiagnosisResult, result2: DiagnosisResult): Dia
   return {
     name: baseResult.name,
     description: combinedDescription,
+    confidence: newConfidence,
+    treatments: combinedTreatments
+  };
+}
+
+/**
+ * 综合三个模型的分析结果
+ */
+function combineTripleResults(
+  result1: DiagnosisResult, 
+  result2: DiagnosisResult, 
+  result3: DiagnosisResult
+): DiagnosisResult {
+  console.log("综合三个模型的分析结果");
+  
+  // 创建疾病名称的映射，进行归一化处理
+  const diseaseNames = [result1.name, result2.name, result3.name];
+  
+  // 统计每个疾病名称出现的次数
+  const nameCounts: Record<string, {count: number, confidence: number, results: DiagnosisResult[]}> = {};
+  
+  [result1, result2, result3].forEach(result => {
+    if (!nameCounts[result.name]) {
+      nameCounts[result.name] = {count: 0, confidence: 0, results: []};
+    }
+    nameCounts[result.name].count++;
+    nameCounts[result.name].confidence += result.confidence;
+    nameCounts[result.name].results.push(result);
+  });
+  
+  // 找出出现次数最多的疾病名称
+  let maxCount = 0;
+  let maxConfidence = 0;
+  let mostLikelyDiseaseName = '';
+  
+  for (const [diseaseName, data] of Object.entries(nameCounts)) {
+    // 优先考虑出现次数，如果次数相同则考虑置信度总和
+    if (data.count > maxCount || (data.count === maxCount && data.confidence > maxConfidence)) {
+      maxCount = data.count;
+      maxConfidence = data.confidence;
+      mostLikelyDiseaseName = diseaseName;
+    }
+  }
+  
+  // 获取关联结果
+  const relatedResults = nameCounts[mostLikelyDiseaseName].results;
+  
+  // 计算新的置信度 - 考虑到一致性和每个模型的置信度
+  let newConfidence = relatedResults.reduce((sum, result) => sum + result.confidence, 0) / relatedResults.length;
+  
+  // 如果所有模型都得出相同结果，额外提高置信度
+  if (maxCount === 3) {
+    newConfidence = Math.min(1, newConfidence + 0.15); // 三模型一致，大幅提高置信度
+  } else if (maxCount === 2) {
+    newConfidence = Math.min(1, newConfidence + 0.05); // 两模型一致，小幅提高置信度
+  }
+  
+  // 找出最详细的描述
+  const descriptions = relatedResults.map(result => result.description);
+  const mostDetailedDescription = descriptions.reduce(
+    (longest, current) => current.length > longest.length ? current : longest,
+    ""
+  );
+  
+  // 合并所有处理方法
+  const allTreatments = relatedResults.flatMap(result => result.treatments);
+  const uniqueMethods = new Set<string>();
+  const combinedTreatments = allTreatments
+    .filter(treatment => {
+      // 检查是否已经添加了该方法
+      if (uniqueMethods.has(treatment.method)) {
+        return false;
+      }
+      uniqueMethods.add(treatment.method);
+      return true;
+    })
+    .slice(0, 4); // 最多保留4种处理方法
+  
+  return {
+    name: mostLikelyDiseaseName,
+    description: mostDetailedDescription,
     confidence: newConfidence,
     treatments: combinedTreatments
   };

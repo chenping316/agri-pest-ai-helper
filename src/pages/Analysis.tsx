@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Navigate } from "react-router-dom";
 import { useAppContext } from "@/context/AppContext";
@@ -179,6 +180,7 @@ const Analysis: React.FC = () => {
                   <SelectContent>
                     <SelectItem value="taichu">Taichu-VL (快速)</SelectItem>
                     <SelectItem value="zhipu">智谱清言 (精准)</SelectItem>
+                    <SelectItem value="spark">讯飞星火 (综合)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
