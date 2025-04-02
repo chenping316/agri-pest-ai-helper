@@ -77,11 +77,10 @@ export function parseResponseToResult(responseText: string, plantType?: string):
       const priceMatch = methodSection.match(/(?:估计价格[:：]?\s*|价格[:：]?\s*)([^\n]+)/i);
       const estimatedPrice = priceMatch ? priceMatch[1].trim() : "未知";
       
-      // 添加治疗方法
+      // 添加治疗方法 - 移除steps属性以符合Treatment接口
       treatments.push({
         method: methodName,
         description: methodSection.substring(0, 100) + "...", // 简短描述
-        steps: [], // 由于步骤提取复杂，这里省略
         cost: cost,
         effectiveness: effectiveness,
         estimatedPrice: estimatedPrice
@@ -96,7 +95,6 @@ export function parseResponseToResult(responseText: string, plantType?: string):
       treatments.push({
         method: "常规防治",
         description: "请咨询专业农业技术人员获取详细的治疗方案。",
-        steps: [],
         cost: 'medium',
         effectiveness: 'medium',
         estimatedPrice: "视具体情况而定"
@@ -131,7 +129,6 @@ export function createFallbackResult(plantType?: string, isAPIFailure: boolean =
       {
         method: "重新检测",
         description: "请尝试使用更清晰的图片或在良好光线下重新拍摄，确保图像中的病症特征清晰可见。",
-        steps: [],
         cost: 'low',
         effectiveness: 'medium',
         estimatedPrice: "免费"
@@ -139,7 +136,6 @@ export function createFallbackResult(plantType?: string, isAPIFailure: boolean =
       {
         method: "咨询专家",
         description: "如果问题持续存在，建议咨询当地农业专家或植保站获取专业诊断。",
-        steps: [],
         cost: 'medium',
         effectiveness: 'high',
         estimatedPrice: "视咨询方式而定"
@@ -147,3 +143,4 @@ export function createFallbackResult(plantType?: string, isAPIFailure: boolean =
     ]
   };
 }
+
