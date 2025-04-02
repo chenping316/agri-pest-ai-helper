@@ -15,12 +15,24 @@ export interface SparkMessage {
 }
 
 export interface SparkRequestBody {
-  model: string;
-  messages: SparkMessage[];
-  temperature?: number;
-  top_k?: number;
-  max_tokens?: number;
-  stream?: boolean;
+  header: {
+    app_id: string;
+    uid?: string;
+  };
+  parameter: {
+    chat: {
+      domain: string;
+      temperature?: number;
+      top_k?: number;
+      max_tokens?: number;
+      auditing?: boolean;
+    }
+  };
+  payload: {
+    message: {
+      text?: SparkMessage[];
+    }
+  };
 }
 
 export interface SparkApiOptions {
@@ -41,14 +53,29 @@ export async function callSparkApi(
   console.log("准备向讯飞星火大模型API发送请求...");
   
   try {
+    // 准备认证头
+    const authUrl = `${API_CONFIG.API_KEY}&${API_CONFIG.API_SECRET}`;
+    
     // 准备请求体
     const payload: SparkRequestBody = {
-      model: imageBase64 ? "spark-vl-3.5" : "spark-3.5", // 根据是否有图像选择模型
-      messages: [],
-      temperature: options.temperature ?? 0.7,
-      top_k: options.top_k ?? 4,
-      max_tokens: options.max_tokens ?? 2000,
-      stream: options.stream ?? false
+      header: {
+        app_id: API_CONFIG.APP_ID,
+        uid: "user123" // 可选用户ID
+      },
+      parameter: {
+        chat: {
+          domain: imageBase64 ? "spark-vl-3.5" : "general",
+          temperature: options.temperature ?? 0.7,
+          top_k: options.top_k ?? 4,
+          max_tokens: options.max_tokens ?? 2000,
+          auditing: false
+        }
+      },
+      payload: {
+        message: {
+          text: []
+        }
+      }
     };
     
     // 如果提供了图像，添加包含图像的消息
@@ -58,33 +85,29 @@ export async function callSparkApi(
         ? imageBase64.split("base64,")[1] 
         : imageBase64;
       
-      payload.messages = [
-        {
-          role: "user",
-          content: [
-            { text: userPrompt },
-            { image: imageData }
-          ]
-        }
-      ];
+      payload.payload.message.text = [{
+        role: "user",
+        content: [
+          { text: userPrompt },
+          { image: imageData }
+        ]
+      }];
     } else {
       // 纯文本消息
-      payload.messages = [
-        {
-          role: "user",
-          content: userPrompt
-        }
-      ];
+      payload.payload.message.text = [{
+        role: "user",
+        content: userPrompt
+      }];
     }
     
-    console.log("向讯飞星火大模型API发送请求，使用模型:", payload.model);
+    console.log("向讯飞星火大模型API发送请求，使用模型:", payload.parameter.chat.domain);
     
     // 发送API请求
     const response = await fetch(API_CONFIG.BASE_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${API_CONFIG.API_KEY}:${API_CONFIG.API_SECRET}`
+        "Authorization": `Bearer ${authUrl}`
       },
       body: JSON.stringify(payload)
     });

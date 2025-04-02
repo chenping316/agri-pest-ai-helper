@@ -63,8 +63,8 @@ ${envDataString}
       }
     );
     
-    // 提取文本响应
-    const responseText = apiResponse.choices?.[0]?.message?.content || "";
+    // 提取文本响应 - 适应新的API响应格式
+    const responseText = apiResponse.payload?.choices?.text?.[0] || "";
     
     // 解析响应为结构化结果
     return parseResponseToResult(responseText, plantType);
