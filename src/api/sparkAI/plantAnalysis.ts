@@ -53,7 +53,7 @@ ${envDataString}
    - 有效性级别(低/中/高)
    - 估计价格`;
 
-    // 调用星火API
+    // 调用星火API (WebSocket版)
     const apiResponse = await callSparkApi(
       userPrompt,
       imageBase64,
@@ -63,7 +63,7 @@ ${envDataString}
       }
     );
     
-    // 提取文本响应 - 适应新的API响应格式
+    // 提取文本响应 - 适应WebSocket API响应格式
     const responseText = apiResponse.payload?.choices?.text?.[0] || "";
     
     // 解析响应为结构化结果
