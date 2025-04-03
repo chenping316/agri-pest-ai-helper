@@ -103,7 +103,7 @@ export async function callSparkApi(
       },
       parameter: {
         chat: {
-          domain: imageBase64 ? "spark-vl-3.5" : "general",
+          domain: imageBase64 ? "spark-vl-3.5" : "lite",
           temperature: options.temperature ?? 0.7,
           top_k: options.top_k ?? 4,
           max_tokens: options.max_tokens ?? 2000,
@@ -177,7 +177,7 @@ export async function callSparkApi(
           
           // 累积响应数据
           if (response.payload?.choices?.text) {
-            responseData += response.payload.choices.text[0];
+            responseData += response.payload.choices.text[0].content || "";
           }
           
           // 检查是否完成

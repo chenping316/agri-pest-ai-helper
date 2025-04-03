@@ -77,7 +77,7 @@ export function parseResponseToResult(responseText: string, plantType?: string):
       const priceMatch = methodSection.match(/(?:估计价格[:：]?\s*|价格[:：]?\s*)([^\n]+)/i);
       const estimatedPrice = priceMatch ? priceMatch[1].trim() : "未知";
       
-      // 添加治疗方法 - 移除steps属性以符合Treatment接口
+      // 添加治疗方法
       treatments.push({
         method: methodName,
         description: methodSection.substring(0, 100) + "...", // 简短描述
@@ -143,4 +143,3 @@ export function createFallbackResult(plantType?: string, isAPIFailure: boolean =
     ]
   };
 }
-

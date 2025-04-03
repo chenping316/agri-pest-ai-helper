@@ -64,7 +64,7 @@ ${envDataString}
     );
     
     // 提取文本响应 - 适应WebSocket API响应格式
-    const responseText = apiResponse.payload?.choices?.text?.[0] || "";
+    const responseText = apiResponse.payload?.choices?.text || "";
     
     // 解析响应为结构化结果
     return parseResponseToResult(responseText, plantType);
