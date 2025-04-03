@@ -6,7 +6,8 @@ import { Image, Smartphone, Wifi, WifiOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { 
   analyzePlantDisease, 
-  analyzeWithMultipleModels, 
+  analyzeWithMultipleModels,
+  analyzeWithSuperMultipleModels,
   AnalysisModelType 
 } from "@/utils/aiAnalysis";
 import Navigation from "@/components/Navigation";
@@ -42,6 +43,7 @@ const Analysis: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchDialogOpen, setSearchDialogOpen] = useState(false);
   const [useMultiModel, setUseMultiModel] = useState(true); // 默认启用多模型分析
+  const [useSuperMultiModel, setUseSuperMultiModel] = useState(false); // 默认不启用四模型分析
   const [selectedModel, setSelectedModel] = useState<AnalysisModelType>('taichu'); // 默认使用Taichu-VL模型
   const { toast } = useToast();
 
@@ -84,8 +86,16 @@ const Analysis: React.FC = () => {
       // 根据用户选择的分析模式调用不同的分析函数
       let result;
       
-      if (useMultiModel) {
-        // 使用多模型分析
+      if (useSuperMultiModel) {
+        // 使用四模型分析
+        result = await analyzeWithSuperMultipleModels(
+          capturedImage,
+          analysisMode,
+          selectedPlantType || undefined,
+          envData || undefined
+        );
+      } else if (useMultiModel) {
+        // 使用三模型分析
         result = await analyzeWithMultipleModels(
           capturedImage,
           analysisMode,
@@ -156,19 +166,37 @@ const Analysis: React.FC = () => {
           )}
           
           <div className="mb-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-2">
-            <div className="flex items-center space-x-2">
-              <Switch 
-                id="multi-model" 
-                checked={useMultiModel} 
-                onCheckedChange={setUseMultiModel} 
-              />
-              <Label htmlFor="multi-model" className="cursor-pointer">
-                {useMultiModel ? "多模型分析（更准确）" : "单模型分析（更快）"}
-              </Label>
+            <div className="flex flex-col space-y-2 w-full">
+              <div className="flex items-center space-x-2">
+                <Switch 
+                  id="multi-model" 
+                  checked={useMultiModel || useSuperMultiModel} 
+                  onCheckedChange={(checked) => {
+                    setUseMultiModel(checked);
+                    if (!checked) setUseSuperMultiModel(false);
+                  }} 
+                />
+                <Label htmlFor="multi-model" className="cursor-pointer">
+                  {useMultiModel || useSuperMultiModel ? "多模型分析（更准确）" : "单模型分析（更快）"}
+                </Label>
+              </div>
+              
+              {useMultiModel && (
+                <div className="flex items-center space-x-2 ml-6">
+                  <Switch 
+                    id="super-multi-model" 
+                    checked={useSuperMultiModel} 
+                    onCheckedChange={setUseSuperMultiModel} 
+                  />
+                  <Label htmlFor="super-multi-model" className="cursor-pointer">
+                    {useSuperMultiModel ? "四模型超级分析（最准确）" : "三模型标准分析"}
+                  </Label>
+                </div>
+              )}
             </div>
             
-            {!useMultiModel && (
-              <div className="flex items-center space-x-2">
+            {!useMultiModel && !useSuperMultiModel && (
+              <div className="flex items-center space-x-2 w-full md:w-auto">
                 <Label htmlFor="model-select">选择模型:</Label>
                 <Select 
                   value={selectedModel} 
@@ -181,6 +209,7 @@ const Analysis: React.FC = () => {
                     <SelectItem value="taichu">Taichu-VL (快速)</SelectItem>
                     <SelectItem value="zhipu">智谱清言 (精准)</SelectItem>
                     <SelectItem value="spark">讯飞星火 (综合)</SelectItem>
+                    <SelectItem value="qwen">通义千问 (稳定)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
