@@ -10,5 +10,7 @@ export const API_CONFIG = {
   // API密钥
   API_KEY: "sk-a7e3ebb3d5ee4e3ea708bfd86adcd5b0",
   // 默认模型
-  DEFAULT_MODEL: "qwen-vl-plus"
+  DEFAULT_MODEL: "qwen-vl-plus",
+  // OCR模型
+  OCR_MODEL: "qwen-vl-ocr"
 };

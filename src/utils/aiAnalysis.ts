@@ -2,13 +2,13 @@ import { AnalysisMode, DiagnosisResult, EnvData } from "@/types";
 import { analyzePlantDisease as taichuAnalyzePlantDisease } from "@/api/taichuVL/plantAnalysis";
 import { analyzePlantDisease as chatGLMAnalyzePlantDisease } from "@/api/chatGLM/plantAnalysis";
 import { analyzePlantDisease as sparkAnalyzePlantDisease } from "@/api/sparkAI/plantAnalysis";
-import { analyzePlantDisease as qwenAnalyzePlantDisease } from "@/api/qwenVL/plantAnalysis";
+import { analyzePlantDisease as qwenAnalyzePlantDisease, analyzeTextOnPlantImage as qwenOcrAnalyzePlantDisease } from "@/api/qwenVL/plantAnalysis";
 import { toast } from "sonner";
 
 /**
  * 定义分析模型类型
  */
-export type AnalysisModelType = 'taichu' | 'zhipu' | 'spark' | 'qwen' | 'multi' | 'super-multi';
+export type AnalysisModelType = 'taichu' | 'zhipu' | 'spark' | 'qwen' | 'qwen-ocr' | 'multi' | 'super-multi';
 
 /**
  * 使用单一模型分析植物疾病的函数
@@ -42,6 +42,13 @@ export const analyzePlantDisease = async (
       case 'qwen':
         // 使用通义千问大模型
         return await qwenAnalyzePlantDisease(
+          imageBase64,
+          plantType,
+          mode === 'image-and-env' ? envData : undefined
+        );
+      case 'qwen-ocr':
+        // 使用通义千问OCR大模型
+        return await qwenOcrAnalyzePlantDisease(
           imageBase64,
           plantType,
           mode === 'image-and-env' ? envData : undefined
@@ -258,6 +265,126 @@ export const analyzeWithSuperMultipleModels = async (
     return combineQuadrupleResults(taichuResult!, zhipuResult!, sparkResult!, qwenResult!);
   } catch (error) {
     console.error("超级多模型分析出错:", error);
+    throw error;
+  }
+};
+
+/**
+ * 综合使用五种模型分析植物疾病的函数（包括OCR模型）
+ */
+export const analyzeWithUltraMultipleModels = async (
+  imageBase64: string,
+  mode: AnalysisMode,
+  plantType?: string,
+  envData?: EnvData
+): Promise<DiagnosisResult> => {
+  console.log(`开始超级多模型分析（含OCR），模式: ${mode}, 植物类型: ${plantType || '未指定'}`);
+  
+  // 定义模型分析结果和错误
+  let taichuResult: DiagnosisResult | null = null;
+  let taichuError: any = null;
+  let zhipuResult: DiagnosisResult | null = null;
+  let zhipuError: any = null;
+  let sparkResult: DiagnosisResult | null = null;
+  let sparkError: any = null;
+  let qwenResult: DiagnosisResult | null = null;
+  let qwenError: any = null;
+  let qwenOcrResult: DiagnosisResult | null = null;
+  let qwenOcrError: any = null;
+  
+  try {
+    // 并行调用五个模型API以减少等待时间
+    [taichuResult, zhipuResult, sparkResult, qwenResult, qwenOcrResult] = await Promise.all([
+      // Taichu-VL 模型
+      analyzePlantDisease(
+        imageBase64,
+        mode,
+        plantType,
+        mode === 'image-and-env' ? envData : undefined,
+        'taichu'
+      ).catch(error => {
+        console.error("Taichu-VL模型分析失败:", error);
+        taichuError = error;
+        toast.error("Taichu-VL模型分析失败，将使用其他模型结果");
+        return null;
+      }),
+      
+      // 智谱AI模型
+      analyzePlantDisease(
+        imageBase64,
+        mode,
+        plantType,
+        mode === 'image-and-env' ? envData : undefined,
+        'zhipu'
+      ).catch(error => {
+        console.error("智谱AI模型分析失败:", error);
+        zhipuError = error;
+        toast.error("智谱AI模型分析失败，将使用其他模型结果");
+        return null;
+      }),
+      
+      // 讯飞星火模型
+      analyzePlantDisease(
+        imageBase64,
+        mode,
+        plantType,
+        mode === 'image-and-env' ? envData : undefined,
+        'spark'
+      ).catch(error => {
+        console.error("讯飞星火模型分析失败:", error);
+        sparkError = error;
+        toast.error("讯飞星火模型分析失败，将使用其他模型结果");
+        return null;
+      }),
+      
+      // 通义千问模型
+      analyzePlantDisease(
+        imageBase64,
+        mode,
+        plantType,
+        mode === 'image-and-env' ? envData : undefined,
+        'qwen'
+      ).catch(error => {
+        console.error("通义千问模型分析失败:", error);
+        qwenError = error;
+        toast.error("通义千问模型分析失败，将使用其他模型结果");
+        return null;
+      }),
+      
+      // 通义千问OCR模型
+      analyzePlantDisease(
+        imageBase64,
+        mode,
+        plantType,
+        mode === 'image-and-env' ? envData : undefined,
+        'qwen-ocr'
+      ).catch(error => {
+        console.error("通义千问OCR模型分析失败:", error);
+        qwenOcrError = error;
+        toast.error("通义千问OCR模型分析失败，将使用其他模型结果");
+        return null;
+      })
+    ]);
+    
+    // 统计成功的模型数量
+    const successfulResults = [taichuResult, zhipuResult, sparkResult, qwenResult, qwenOcrResult].filter(Boolean);
+    
+    // 如果所有模型都失败，抛出组合错误
+    if (successfulResults.length === 0) {
+      const errorMessage = "所有模型分析都失败了";
+      console.error(errorMessage, {taichuError, zhipuError, sparkError, qwenError, qwenOcrError});
+      throw new Error(errorMessage);
+    }
+    
+    // 如果只有一个模型成功，返回成功的那个结果
+    if (successfulResults.length === 1) {
+      return successfulResults[0]!;
+    }
+    
+    // 使用combineMultiResults函数处理多个结果
+    return combineMultiResults(successfulResults);
+  } catch (error) {
+    console.error("超级多模型（含OCR）分析出错:", error);
     throw error;
   }
 };

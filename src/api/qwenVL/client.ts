@@ -54,6 +54,7 @@ export async function callQwenApi(
     top_p?: number;
     max_tokens?: number;
     stream?: boolean;
+    useOcr?: boolean;
   } = {}
 ): Promise<ApiResponse> {
   console.log("准备向通义千问API发送请求...");
@@ -63,9 +64,12 @@ export async function callQwenApi(
     ? imageBase64 
     : `data:image/jpeg;base64,${imageBase64}`;
   
+  // 选择模型：如果指定OCR则使用OCR模型，否则使用默认VL模型
+  const modelToUse = options.useOcr ? API_CONFIG.OCR_MODEL : API_CONFIG.DEFAULT_MODEL;
+  
   // 准备请求体
   const payload: ApiRequestBody = {
-    model: API_CONFIG.DEFAULT_MODEL,
+    model: modelToUse,
     messages: [
       {
         role: "user",
@@ -81,7 +85,7 @@ export async function callQwenApi(
     stream: options.stream ?? false
   };
   
-  console.log("向通义千问API发送请求...");
+  console.log(`向通义千问API发送请求，使用模型：${modelToUse}...`);
   
   // 发送API请求
   const response = await fetch(API_CONFIG.BASE_URL, {
@@ -103,4 +107,35 @@ export async function callQwenApi(
   console.log("收到来自通义千问API的响应:", jsonResponse);
   
   return jsonResponse as ApiResponse;
+}
+
+/**
+ * OCR文本提取专用API调用
+ */
+export async function extractTextWithOcr(
+  imageBase64: string,
+  options: {
+    temperature?: number;
+    top_p?: number;
+    max_tokens?: number;
+  } = {}
+): Promise<string> {
+  try {
+    const response = await callQwenApi(
+      "请提取图片中的所有文本内容，按照原始布局呈现。",
+      imageBase64,
+      {
+        ...options,
+        useOcr: true, // 使用OCR模型
+        temperature: options.temperature ?? 0.2, // OCR任务建议低温度
+      }
+    );
+    
+    // 从响应中提取文本
+    const extractedText = response.choices[0]?.message?.content || "";
+    return extractedText;
+  } catch (error) {
+    console.error("OCR文本提取失败:", error);
+    throw error;
+  }
 }
