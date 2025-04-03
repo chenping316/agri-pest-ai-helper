@@ -1,14 +1,19 @@
+
 import { AnalysisMode, DiagnosisResult, EnvData } from "@/types";
 import { analyzePlantDisease as taichuAnalyzePlantDisease } from "@/api/taichuVL/plantAnalysis";
 import { analyzePlantDisease as chatGLMAnalyzePlantDisease } from "@/api/chatGLM/plantAnalysis";
 import { analyzePlantDisease as sparkAnalyzePlantDisease } from "@/api/sparkAI/plantAnalysis";
-import { analyzePlantDisease as qwenAnalyzePlantDisease, analyzeTextOnPlantImage as qwenOcrAnalyzePlantDisease } from "@/api/qwenVL/plantAnalysis";
+import { 
+  analyzePlantDisease as qwenAnalyzePlantDisease, 
+  analyzeTextOnPlantImage as qwenOcrAnalyzePlantDisease,
+  analyzePlantWithLlama as qwenLlamaAnalyzePlantDisease
+} from "@/api/qwenVL/plantAnalysis";
 import { toast } from "sonner";
 
 /**
  * 定义分析模型类型
  */
-export type AnalysisModelType = 'taichu' | 'zhipu' | 'spark' | 'qwen' | 'qwen-ocr' | 'multi' | 'super-multi';
+export type AnalysisModelType = 'taichu' | 'zhipu' | 'spark' | 'qwen' | 'qwen-ocr' | 'qwen-llama' | 'multi' | 'super-multi' | 'ultra-multi';
 
 /**
  * 使用单一模型分析植物疾病的函数
@@ -49,6 +54,13 @@ export const analyzePlantDisease = async (
       case 'qwen-ocr':
         // 使用通义千问OCR大模型
         return await qwenOcrAnalyzePlantDisease(
+          imageBase64,
+          plantType,
+          mode === 'image-and-env' ? envData : undefined
+        );
+      case 'qwen-llama':
+        // 使用通义千问Llama Vision大模型
+        return await qwenLlamaAnalyzePlantDisease(
           imageBase64,
           plantType,
           mode === 'image-and-env' ? envData : undefined
@@ -262,7 +274,7 @@ export const analyzeWithSuperMultipleModels = async (
     }
     
     // 如果四个模型都成功，综合四个模型的结果
-    return combineQuadrupleResults(taichuResult!, zhipuResult!, sparkResult!, qwenResult!);
+    return combineMultiResults(successfulResults);
   } catch (error) {
     console.error("超级多模型分析出错:", error);
     throw error;
@@ -278,7 +290,7 @@ export const analyzeWithUltraMultipleModels = async (
   plantType?: string,
   envData?: EnvData
 ): Promise<DiagnosisResult> => {
-  console.log(`开始超级多模型分析（含OCR），模式: ${mode}, 植物类型: ${plantType || '未指定'}`);
+  console.log(`开始超级多模型分析（含OCR和Llama），模式: ${mode}, 植物类型: ${plantType || '未指定'}`);
   
   // 定义模型分析结果和错误
   let taichuResult: DiagnosisResult | null = null;
@@ -291,10 +303,12 @@ export const analyzeWithUltraMultipleModels = async (
   let qwenError: any = null;
   let qwenOcrResult: DiagnosisResult | null = null;
   let qwenOcrError: any = null;
+  let qwenLlamaResult: DiagnosisResult | null = null;
+  let qwenLlamaError: any = null;
   
   try {
-    // 并行调用五个模型API以减少等待时间
-    [taichuResult, zhipuResult, sparkResult, qwenResult, qwenOcrResult] = await Promise.all([
+    // 并行调用六个模型API以减少等待时间
+    [taichuResult, zhipuResult, sparkResult, qwenResult, qwenOcrResult, qwenLlamaResult] = await Promise.all([
       // Taichu-VL 模型
       analyzePlantDisease(
         imageBase64,
@@ -363,16 +377,44 @@ export const analyzeWithUltraMultipleModels = async (
         qwenOcrError = error;
         toast.error("通义千问OCR模型分析失败，将使用其他模型结果");
         return null;
+      }),
+      
+      // 通义千问Llama Vision模型
+      analyzePlantDisease(
+        imageBase64,
+        mode,
+        plantType,
+        mode === 'image-and-env' ? envData : undefined,
+        'qwen-llama'
+      ).catch(error => {
+        console.error("通义千问Llama模型分析失败:", error);
+        qwenLlamaError = error;
+        toast.error("通义千问Llama模型分析失败，将使用其他模型结果");
+        return null;
       })
     ]);
     
     // 统计成功的模型数量
-    const successfulResults = [taichuResult, zhipuResult, sparkResult, qwenResult, qwenOcrResult].filter(Boolean);
+    const successfulResults = [
+      taichuResult, 
+      zhipuResult, 
+      sparkResult, 
+      qwenResult, 
+      qwenOcrResult,
+      qwenLlamaResult
+    ].filter(Boolean);
     
     // 如果所有模型都失败，抛出组合错误
     if (successfulResults.length === 0) {
       const errorMessage = "所有模型分析都失败了";
-      console.error(errorMessage, {taichuError, zhipuError, sparkError, qwenError, qwenOcrError});
+      console.error(errorMessage, {
+        taichuError, 
+        zhipuError, 
+        sparkError, 
+        qwenError, 
+        qwenOcrError,
+        qwenLlamaError
+      });
       throw new Error(errorMessage);
     }
     
@@ -384,7 +426,7 @@ export const analyzeWithUltraMultipleModels = async (
     // 使用combineMultiResults函数处理多个结果
     return combineMultiResults(successfulResults);
   } catch (error) {
-    console.error("超级多模型（含OCR）分析出错:", error);
+    console.error("超级多模型（含OCR和Llama）分析出错:", error);
     throw error;
   }
 };
@@ -617,17 +659,4 @@ function combineMultiResults(results: DiagnosisResult[]): DiagnosisResult {
     confidence: newConfidence,
     treatments: combinedTreatments
   };
-}
-
-/**
- * 综合四个模型的分析结果
- */
-function combineQuadrupleResults(
-  result1: DiagnosisResult, 
-  result2: DiagnosisResult, 
-  result3: DiagnosisResult,
-  result4: DiagnosisResult
-): DiagnosisResult {
-  console.log("综合四个模型的分析结果");
-  return combineMultiResults([result1, result2, result3, result4]);
 }

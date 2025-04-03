@@ -1,7 +1,7 @@
 
 /**
  * 通义千问 API Client
- * 使用OpenAI兼容模式API
+ * 使用OpenAI兼容模式API和DashScope原生API
  */
 
 import { API_CONFIG } from "./auth";
@@ -44,7 +44,49 @@ export interface ApiResponse {
 }
 
 /**
- * 发送请求到通义千问API
+ * DashScope原生API请求体接口
+ */
+export interface DashScopeRequestBody {
+  model: string;
+  input: {
+    messages: {
+      role: string;
+      content: (
+        | { text: string }
+        | { image: string }
+      )[];
+    }[];
+  };
+  parameters?: {
+    temperature?: number;
+    top_p?: number;
+    max_tokens?: number;
+  };
+}
+
+/**
+ * DashScope原生API响应接口
+ */
+export interface DashScopeResponse {
+  output: {
+    choices: {
+      finish_reason: string;
+      message: {
+        role: string;
+        content: { text: string }[];
+      };
+    }[];
+  };
+  usage: {
+    input_tokens: number;
+    output_tokens: number;
+    total_tokens: number;
+  };
+  request_id: string;
+}
+
+/**
+ * 发送请求到通义千问API (OpenAI兼容模式)
  */
 export async function callQwenApi(
   userPrompt: string,
@@ -57,7 +99,7 @@ export async function callQwenApi(
     useOcr?: boolean;
   } = {}
 ): Promise<ApiResponse> {
-  console.log("准备向通义千问API发送请求...");
+  console.log("准备向通义千问API(OpenAI兼容模式)发送请求...");
   
   // 数据URL格式处理
   const imageUrl = imageBase64.startsWith("data:") 
@@ -110,6 +152,72 @@ export async function callQwenApi(
 }
 
 /**
+ * 发送请求到通义千问API (DashScope原生模式-Llama Vision)
+ */
+export async function callQwenDashScopeApi(
+  userPrompt: string,
+  imageBase64: string,
+  options: {
+    temperature?: number;
+    top_p?: number;
+    max_tokens?: number;
+  } = {}
+): Promise<DashScopeResponse> {
+  console.log("准备向通义千问API(DashScope原生模式)发送请求...");
+  
+  // 处理图像数据
+  // 如果是data URL，提取base64部分
+  let imageData = imageBase64;
+  if (imageBase64.startsWith("data:")) {
+    imageData = imageBase64.split('base64,')[1];
+  }
+  
+  // 准备请求体
+  const payload: DashScopeRequestBody = {
+    model: API_CONFIG.LLAMA_VISION_MODEL,
+    input: {
+      messages: [
+        {
+          role: "user",
+          content: [
+            { image: imageData },
+            { text: userPrompt }
+          ]
+        }
+      ]
+    },
+    parameters: {
+      temperature: options.temperature ?? 0.7,
+      top_p: options.top_p ?? 0.9,
+      max_tokens: options.max_tokens ?? 2000
+    }
+  };
+  
+  console.log(`向通义千问DashScope API发送请求，使用模型：${API_CONFIG.LLAMA_VISION_MODEL}...`);
+  
+  // 发送API请求
+  const response = await fetch(API_CONFIG.DASHSCOPE_BASE_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${API_CONFIG.API_KEY}`
+    },
+    body: JSON.stringify(payload)
+  });
+  
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error(`通义千问DashScope API请求失败: ${response.status} - ${errorText}`);
+    throw new Error(`通义千问DashScope API请求失败: ${response.status} - ${errorText}`);
+  }
+  
+  const jsonResponse = await response.json();
+  console.log("收到来自通义千问DashScope API的响应:", jsonResponse);
+  
+  return jsonResponse as DashScopeResponse;
+}
+
+/**
  * OCR文本提取专用API调用
  */
 export async function extractTextWithOcr(
@@ -139,3 +247,4 @@ export async function extractTextWithOcr(
     throw error;
   }
 }
+

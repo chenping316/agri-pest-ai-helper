@@ -25,6 +25,7 @@ const ResultActions: React.FC<ResultActionsProps> = ({
     if (isNetworkError) {
       if (diagnosisResult.name.includes("智谱AI")) return "智谱AI (GLM-4)";
       if (diagnosisResult.name.includes("讯飞星火")) return "讯飞星火";
+      if (diagnosisResult.name.includes("Llama Vision")) return "Llama Vision";
       if (diagnosisResult.name.includes("通义千问")) return "通义千问";
       return "Taichu-VL";
     }
@@ -32,21 +33,23 @@ const ResultActions: React.FC<ResultActionsProps> = ({
     // 根据置信度精确值判断是否为多模型分析
     // 多模型分析会对置信度进行调整，例如取平均值加0.1或0.15
     const confidence = diagnosisResult.confidence;
-    const isQuadrupleModel = confidence.toString().length > 3 && 
-                         confidence > 0.9;
-    const isTripleModel = confidence.toString().length > 3 && 
-                         confidence > 0.85 &&
-                         confidence <= 0.9;
-    const isDoubleModel = confidence.toString().length > 3 && 
-                         !confidence.toString().endsWith("0") &&
-                         confidence > 0.6 && confidence <= 0.85;
     
-    if (isQuadrupleModel) return "四模型混合";
-    if (isTripleModel) return "三模型混合";
-    if (isDoubleModel) return "双模型混合";
+    // 检查是否来自多模型分析
+    const isMultiModel = confidence.toString().length > 3 && 
+                          !confidence.toString().endsWith("0");
+                         
+    if (isMultiModel) {
+      if (confidence > 0.95) return "六模型混合";
+      if (confidence > 0.9) return "五模型混合";
+      if (confidence > 0.85) return "四模型混合";
+      if (confidence > 0.8) return "三模型混合";
+      if (confidence > 0.6) return "双模型混合";
+    }
     
     if (diagnosisResult.name.includes("智谱AI")) return "智谱AI (GLM-4)";
     if (diagnosisResult.name.includes("讯飞星火")) return "讯飞星火";
+    if (diagnosisResult.name.includes("Llama Vision")) return "Llama Vision";
+    if (diagnosisResult.name.includes("通义千问OCR")) return "通义千问OCR";
     if (diagnosisResult.name.includes("通义千问")) return "通义千问";
     return "Taichu-VL";
   };

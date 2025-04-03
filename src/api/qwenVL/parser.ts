@@ -4,6 +4,7 @@
  */
 
 import { DiagnosisResult } from "@/types";
+import { DashScopeResponse } from "./client";
 
 /**
  * 将API响应转换为诊断结果
@@ -114,12 +115,35 @@ export function parseResponseToResult(responseText: string, plantType?: string):
 }
 
 /**
+ * 解析DashScope原生API的响应
+ */
+export function parseResponseFromDashScope(response: DashScopeResponse, plantType?: string): DiagnosisResult {
+  try {
+    console.log("解析DashScope原生API响应...");
+    
+    // 提取文本内容
+    const responseText = response.output?.choices[0]?.message?.content?.[0]?.text || "";
+    
+    // 使用已有的解析逻辑处理文本内容
+    return parseResponseToResult(responseText, plantType);
+  } catch (error) {
+    console.error("解析DashScope API响应出错:", error);
+    return createFallbackResult(plantType, false, "Llama Vision");
+  }
+}
+
+/**
  * 创建回退结果（当API调用失败时使用）
  */
-export function createFallbackResult(plantType?: string, isAPIFailure: boolean = false): DiagnosisResult {
+export function createFallbackResult(
+  plantType?: string, 
+  isAPIFailure: boolean = false,
+  modelPrefix: string = ""
+): DiagnosisResult {
   // 根据植物类型生成合理的回退数据
   const plantTypeText = plantType || "未知植物";
-  const isAPIFailurePrefix = isAPIFailure ? "通义千问API: " : "";
+  const prefixText = modelPrefix ? `${modelPrefix}: ` : "";
+  const isAPIFailurePrefix = isAPIFailure ? `${prefixText}通义千问API: ` : prefixText;
   
   return {
     name: `${isAPIFailurePrefix}疑似普通病害`,
