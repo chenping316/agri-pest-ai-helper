@@ -360,7 +360,7 @@ function combineTripleResults(
   let newConfidence = relatedResults.reduce((sum, result) => sum + result.confidence, 0) / relatedResults.length;
   
   // 根据模型一致性调整置信度
-  const totalModels = results.length;
+  const totalModels = 3;
   const consensusModels = maxCount;
   const consensusRatio = consensusModels / totalModels;
   
