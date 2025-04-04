@@ -1,6 +1,6 @@
 
 /**
- * 讯飞星火大模型 植物疾病分析
+ * 讯飞星火大模型 植物疾病分析 (HTTP REST API)
  */
 
 import { DiagnosisResult, EnvData } from "@/types";
@@ -53,7 +53,7 @@ ${envDataString}
    - 有效性级别(低/中/高)
    - 估计价格`;
 
-    // 调用星火API (WebSocket版)
+    // 调用星火API (HTTP REST API版)
     const apiResponse = await callSparkApi(
       userPrompt,
       imageBase64,
