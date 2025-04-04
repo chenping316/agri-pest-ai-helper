@@ -24,7 +24,6 @@ const ResultActions: React.FC<ResultActionsProps> = ({
     
     if (isNetworkError) {
       if (diagnosisResult.name.includes("智谱AI")) return "智谱AI (GLM-4)";
-      if (diagnosisResult.name.includes("讯飞星火")) return "讯飞星火";
       if (diagnosisResult.name.includes("Llama Vision")) return "Llama Vision";
       if (diagnosisResult.name.includes("通义千问")) return "通义千问";
       return "Taichu-VL";
@@ -39,15 +38,14 @@ const ResultActions: React.FC<ResultActionsProps> = ({
                           !confidence.toString().endsWith("0");
                          
     if (isMultiModel) {
-      if (confidence > 0.95) return "六模型混合";
-      if (confidence > 0.9) return "五模型混合";
-      if (confidence > 0.85) return "四模型混合";
-      if (confidence > 0.8) return "三模型混合";
+      if (confidence > 0.95) return "多模型混合";
+      if (confidence > 0.9) return "四模型混合";
+      if (confidence > 0.85) return "三模型混合";
+      if (confidence > 0.8) return "双模型混合";
       if (confidence > 0.6) return "双模型混合";
     }
     
     if (diagnosisResult.name.includes("智谱AI")) return "智谱AI (GLM-4)";
-    if (diagnosisResult.name.includes("讯飞星火")) return "讯飞星火";
     if (diagnosisResult.name.includes("Llama Vision")) return "Llama Vision";
     if (diagnosisResult.name.includes("通义千问OCR")) return "通义千问OCR";
     if (diagnosisResult.name.includes("通义千问")) return "通义千问";

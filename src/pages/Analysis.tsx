@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Navigate } from "react-router-dom";
 import { useAppContext } from "@/context/AppContext";
@@ -87,7 +86,7 @@ const Analysis: React.FC = () => {
       let result;
       
       if (useSuperMultiModel) {
-        // 使用四模型分析
+        // 使用多模型分析
         result = await analyzeWithSuperMultipleModels(
           capturedImage,
           analysisMode,
@@ -95,7 +94,7 @@ const Analysis: React.FC = () => {
           envData || undefined
         );
       } else if (useMultiModel) {
-        // 使用三模型分析
+        // 使用多模型分析
         result = await analyzeWithMultipleModels(
           capturedImage,
           analysisMode,
@@ -189,7 +188,7 @@ const Analysis: React.FC = () => {
                     onCheckedChange={setUseSuperMultiModel} 
                   />
                   <Label htmlFor="super-multi-model" className="cursor-pointer">
-                    {useSuperMultiModel ? "四模型超级分析（最准确）" : "三模型标准分析"}
+                    {useSuperMultiModel ? "三模型超级分析（最准确）" : "双模型标准分析"}
                   </Label>
                 </div>
               )}
@@ -208,7 +207,6 @@ const Analysis: React.FC = () => {
                   <SelectContent>
                     <SelectItem value="taichu">Taichu-VL (快速)</SelectItem>
                     <SelectItem value="zhipu">智谱清言 (精准)</SelectItem>
-                    <SelectItem value="spark">讯飞星火 (综合)</SelectItem>
                     <SelectItem value="qwen">通义千问 (稳定)</SelectItem>
                   </SelectContent>
                 </Select>
