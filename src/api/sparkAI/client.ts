@@ -6,13 +6,12 @@
 
 import { API_CONFIG } from "./auth";
 import CryptoJS from 'crypto-js';
+import { format } from 'date-fns';
 
 export interface SparkMessage {
   role: string;
-  content: string | {
-    text?: string;
-    image?: string;
-  }[];
+  content: string;
+  content_type?: "text" | "image";
 }
 
 export interface SparkRequestBody {
@@ -43,203 +42,160 @@ export interface SparkApiOptions {
   stream?: boolean;
 }
 
-/**
- * 生成认证URL
- */
-function createSignedUrl(): string {
-  const hostUrl = API_CONFIG.WS_URL;
-  const apiKey = API_CONFIG.API_KEY;
-  const apiSecret = API_CONFIG.API_SECRET;
-  
-  // 构建鉴权参数
-  const date = new Date().toUTCString();
-  const algorithm = 'hmac-sha256';
-  const headers = 'host date request-line';
-  const signatureOrigin = `host: ${new URL(hostUrl).host}\ndate: ${date}\nGET /v1.1/chat HTTP/1.1`;
-  
-  // 使用CryptoJS生成签名
-  const signatureSha = CryptoJS.HmacSHA256(signatureOrigin, apiSecret);
-  const signature = CryptoJS.enc.Base64.stringify(signatureSha);
-  
-  // 构建鉴权字符串
-  const authorizationOrigin = `api_key="${apiKey}", algorithm="${algorithm}", headers="${headers}", signature="${signature}"`;
-  
-  // 使用Base64编码
-  const authorization = btoa(authorizationOrigin);
-  
-  // 将所有参数拼接在URL上
-  const websocketUrl = `${hostUrl}?authorization=${encodeURIComponent(authorization)}&date=${encodeURIComponent(date)}&host=${encodeURIComponent(new URL(hostUrl).host)}`;
-  
-  return websocketUrl;
+interface SparkResponse {
+  header: {
+    code: number;
+    message: string;
+    sid: string;
+    status: number;
+  };
+  payload: {
+    choices: {
+      status: number;
+      seq: number;
+      text: {
+        role: string;
+        content: string;
+        index: number;
+      }[];
+    };
+    usage: {
+      text: {
+        question_tokens: number;
+        prompt_tokens: number;
+        completion_tokens: number;
+        total_tokens: number;
+      };
+    };
+  };
 }
 
 /**
- * WebSocket连接状态管理
+ * 生成RFC1123格式的GMT时间戳
  */
-let currentWebsocket: WebSocket | null = null;
-let pendingResolve: ((value: any) => void) | null = null;
-let pendingReject: ((error: any) => void) | null = null;
-let responseData: string = '';
+function formatDate(): string {
+  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  
+  const now = new Date();
+  const day = days[now.getUTCDay()];
+  const date = now.getUTCDate().toString().padStart(2, '0');
+  const month = months[now.getUTCMonth()];
+  const year = now.getUTCFullYear();
+  const hour = now.getUTCHours().toString().padStart(2, '0');
+  const minute = now.getUTCMinutes().toString().padStart(2, '0');
+  const second = now.getUTCSeconds().toString().padStart(2, '0');
+  
+  return `${day}, ${date} ${month} ${year} ${hour}:${minute}:${second} GMT`;
+}
 
 /**
- * 发送请求到讯飞星火大模型 API (WebSocket版)
+ * 创建鉴权URL
+ */
+function createAuthorizationHeader(host: string, date: string, path: string): string {
+  // 步骤1: 拼接签名字符串
+  const tmp = `host: ${host}\ndate: ${date}\nGET ${path} HTTP/1.1`;
+  
+  // 步骤2: 使用HMAC-SHA256算法结合APISecret对tmp进行签名
+  const signatureSha = CryptoJS.HmacSHA256(tmp, API_CONFIG.API_SECRET);
+  const signature = CryptoJS.enc.Base64.stringify(signatureSha);
+  
+  // 步骤3: 拼接authorization_origin
+  const authorizationOrigin = `api_key="${API_CONFIG.API_KEY}", algorithm="hmac-sha256", headers="host date request-line", signature="${signature}"`;
+  
+  // 步骤4: 对authorization_origin进行base64编码
+  return CryptoJS.enc.Base64.stringify(CryptoJS.enc.Utf8.parse(authorizationOrigin));
+}
+
+/**
+ * 发送请求到讯飞星火大模型 API (HTTP版)
  */
 export async function callSparkApi(
   userPrompt: string,
   imageBase64: string = "",
   options: SparkApiOptions = {}
 ): Promise<any> {
-  console.log("准备向讯飞星火大模型API发送WebSocket请求...");
+  console.log("准备向讯飞星火大模型API发送HTTP请求...");
   
   try {
-    // 准备认证URL
-    const wsUrl = createSignedUrl();
+    const url = new URL(API_CONFIG.API_URL);
+    const host = url.host;
+    const path = url.pathname;
+    const date = formatDate();
     
-    // 准备请求体
-    const payload: SparkRequestBody = {
-      header: {
-        app_id: API_CONFIG.APP_ID,
-        uid: "user123" // 可选用户ID
-      },
-      parameter: {
-        chat: {
-          domain: imageBase64 ? "spark-vl-3.5" : "lite",
-          temperature: options.temperature ?? 0.7,
-          top_k: options.top_k ?? 4,
-          max_tokens: options.max_tokens ?? 2000,
-          auditing: false
-        }
-      },
-      payload: {
-        message: {
-          text: []
-        }
-      }
+    // 生成鉴权信息
+    const authorization = createAuthorizationHeader(host, date, path);
+    
+    // 准备请求头
+    const headers = {
+      "Content-Type": "application/json",
+      "Authorization": authorization,
+      "Date": date,
+      "Host": host
     };
     
-    // 如果提供了图像，添加包含图像的消息
+    // 准备消息内容
+    const messages: SparkMessage[] = [];
+    
+    // 如果有图像，添加图像消息（base64格式）
     if (imageBase64) {
       // 确保图像格式正确（base64 字符串，不包含前缀）
       const imageData = imageBase64.includes("base64,") 
         ? imageBase64.split("base64,")[1] 
         : imageBase64;
       
-      payload.payload.message.text = [{
+      // 对于Spark REST API，图像和文本需要分开发送
+      messages.push({
         role: "user",
-        content: [
-          { text: userPrompt },
-          { image: imageData }
-        ]
-      }];
-    } else {
-      // 纯文本消息
-      payload.payload.message.text = [{
-        role: "user",
-        content: userPrompt
-      }];
+        content: imageData,
+        content_type: "image"
+      });
     }
     
-    console.log("向讯飞星火大模型API发送WebSocket请求，使用模型:", payload.parameter.chat.domain);
-    
-    // 创建一个Promise来处理WebSocket通信
-    return new Promise((resolve, reject) => {
-      // 保存Promise的resolve和reject函数，以便WebSocket事件处理程序可以访问它们
-      pendingResolve = resolve;
-      pendingReject = reject;
-      responseData = '';
-      
-      // 创建WebSocket连接
-      const ws = new WebSocket(wsUrl);
-      currentWebsocket = ws;
-      
-      // 连接打开时，发送请求
-      ws.onopen = () => {
-        console.log("WebSocket连接已打开，发送数据...");
-        ws.send(JSON.stringify(payload));
-      };
-      
-      // 接收消息
-      ws.onmessage = (event) => {
-        try {
-          const response = JSON.parse(event.data);
-          console.log("WebSocket收到消息:", response);
-          
-          // 检查是否有错误
-          if (response.header?.code !== 0) {
-            const errorMsg = `讯飞星火API错误: ${response.header?.message || '未知错误'}`;
-            console.error(errorMsg);
-            ws.close();
-            pendingReject && pendingReject(new Error(errorMsg));
-            pendingResolve = null;
-            pendingReject = null;
-            return;
-          }
-          
-          // 累积响应数据
-          if (response.payload?.choices?.text) {
-            responseData += response.payload.choices.text[0].content || "";
-          }
-          
-          // 检查是否完成
-          if (response.header?.status === 2) {
-            // 构建完整响应
-            const fullResponse = {
-              payload: {
-                choices: {
-                  text: [responseData]
-                }
-              }
-            };
-            
-            // 关闭WebSocket并解析Promise
-            ws.close();
-            pendingResolve && pendingResolve(fullResponse);
-            pendingResolve = null;
-            pendingReject = null;
-          }
-        } catch (error) {
-          console.error("解析WebSocket消息失败:", error);
-          ws.close();
-          pendingReject && pendingReject(error);
-          pendingResolve = null;
-          pendingReject = null;
-        }
-      };
-      
-      // 处理错误
-      ws.onerror = (error) => {
-        console.error("WebSocket错误:", error);
-        pendingReject && pendingReject(error);
-        pendingResolve = null;
-        pendingReject = null;
-      };
-      
-      // 连接关闭
-      ws.onclose = () => {
-        console.log("WebSocket连接已关闭");
-        currentWebsocket = null;
-        
-        // 如果Promise还未解析，则认为是错误
-        if (pendingResolve && pendingReject) {
-          pendingReject(new Error("WebSocket连接意外关闭"));
-          pendingResolve = null;
-          pendingReject = null;
-        }
-      };
-      
-      // 设置超时
-      setTimeout(() => {
-        if (pendingResolve && pendingReject) {
-          console.error("WebSocket请求超时");
-          ws.close();
-          pendingReject(new Error("WebSocket请求超时"));
-          pendingResolve = null;
-          pendingReject = null;
-        }
-      }, 30000); // 30秒超时
+    // 添加文本消息
+    messages.push({
+      role: "user",
+      content: userPrompt
     });
+    
+    // 准备请求体
+    const requestBody = {
+      model: API_CONFIG.DEFAULT_MODEL,
+      messages: messages,
+      temperature: options.temperature ?? 0.7,
+      top_k: options.top_k ?? 4,
+      max_tokens: options.max_tokens ?? 2000,
+      stream: options.stream ?? false
+    };
+    
+    console.log(`向讯飞星火大模型API发送HTTP请求，使用模型: ${API_CONFIG.DEFAULT_MODEL}`);
+    
+    // 发送API请求
+    const response = await fetch(API_CONFIG.API_URL, {
+      method: "POST",
+      headers: headers,
+      body: JSON.stringify(requestBody)
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`讯飞星火API请求失败: ${response.status} - ${errorText}`);
+      throw new Error(`讯飞星火API请求失败: ${response.status} - ${errorText}`);
+    }
+    
+    const jsonResponse = await response.json();
+    console.log("收到来自讯飞星火API的响应:", jsonResponse);
+    
+    // 处理响应格式，转换为统一的格式
+    return {
+      payload: {
+        choices: {
+          text: jsonResponse.choices[0].message.content
+        }
+      }
+    };
   } catch (error) {
-    console.error("调用讯飞星火API (WebSocket) 时出错:", error);
+    console.error("调用讯飞星火API (HTTP) 时出错:", error);
     throw error;
   }
 }
