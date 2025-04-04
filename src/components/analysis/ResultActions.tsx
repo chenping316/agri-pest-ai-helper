@@ -26,6 +26,7 @@ const ResultActions: React.FC<ResultActionsProps> = ({
       if (diagnosisResult.name.includes("智谱AI")) return "智谱AI (GLM-4)";
       if (diagnosisResult.name.includes("Llama Vision")) return "Llama Vision";
       if (diagnosisResult.name.includes("通义千问")) return "通义千问";
+      if (diagnosisResult.name.includes("星火AI")) return "讯飞星火";
       return "Taichu-VL";
     }
     
@@ -49,6 +50,7 @@ const ResultActions: React.FC<ResultActionsProps> = ({
     if (diagnosisResult.name.includes("Llama Vision")) return "Llama Vision";
     if (diagnosisResult.name.includes("通义千问OCR")) return "通义千问OCR";
     if (diagnosisResult.name.includes("通义千问")) return "通义千问";
+    if (diagnosisResult.name.includes("星火AI")) return "讯飞星火";
     return "Taichu-VL";
   };
   

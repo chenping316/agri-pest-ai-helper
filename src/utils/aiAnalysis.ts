@@ -6,12 +6,13 @@ import {
   analyzeTextOnPlantImage as qwenOcrAnalyzePlantDisease,
   analyzePlantWithLlama as qwenLlamaAnalyzePlantDisease
 } from "@/api/qwenVL/plantAnalysis";
+import { analyzePlantDisease as sparkAnalyzePlantDisease } from "@/api/sparkAI/plantAnalysis";
 import { toast } from "sonner";
 
 /**
  * 定义分析模型类型
  */
-export type AnalysisModelType = 'taichu' | 'zhipu' | 'qwen' | 'qwen-ocr' | 'qwen-llama' | 'multi' | 'super-multi' | 'ultra-multi';
+export type AnalysisModelType = 'taichu' | 'zhipu' | 'qwen' | 'qwen-ocr' | 'qwen-llama' | 'spark' | 'multi' | 'super-multi' | 'ultra-multi';
 
 /**
  * 使用单一模型分析植物疾病的函数
@@ -52,6 +53,13 @@ export const analyzePlantDisease = async (
       case 'qwen-llama':
         // 使用通义千问Llama Vision大模型
         return await qwenLlamaAnalyzePlantDisease(
+          imageBase64,
+          plantType,
+          mode === 'image-and-env' ? envData : undefined
+        );
+      case 'spark':
+        // 使用讯飞星火大模型
+        return await sparkAnalyzePlantDisease(
           imageBase64,
           plantType,
           mode === 'image-and-env' ? envData : undefined

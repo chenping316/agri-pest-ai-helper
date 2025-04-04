@@ -208,6 +208,7 @@ const Analysis: React.FC = () => {
                     <SelectItem value="taichu">Taichu-VL (快速)</SelectItem>
                     <SelectItem value="zhipu">智谱清言 (精准)</SelectItem>
                     <SelectItem value="qwen">通义千问 (稳定)</SelectItem>
+                    <SelectItem value="spark">讯飞星火 (综合)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
