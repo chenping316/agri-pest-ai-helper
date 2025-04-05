@@ -30,10 +30,10 @@ export async function analyzePlantDisease(
     }
     
     if (envData) {
-      prompt += `当前环境数据：温度 ${envData.temperature}°C，`;
-      prompt += `湿度 ${envData.humidity}%，`;
-      prompt += `光照 ${envData.light} lux，`;
-      prompt += `土壤湿度 ${envData.soilMoisture}%。`;
+      prompt += `当前环境数据：温度 ${envData.airTemperature}°C，`;
+      prompt += `湿度 ${envData.airHumidity}%，`;
+      prompt += `土壤湿度 ${envData.soilMoisture}%，`;
+      prompt += `土壤pH值 ${envData.soilPh}。`;
     }
     
     prompt += "请提供以下信息：\n";
