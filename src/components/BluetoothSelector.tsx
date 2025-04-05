@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -109,7 +108,7 @@ const BluetoothSelector: React.FC = () => {
       case 'noDevices':
         return "未检测到任何蓝牙设备，请确保设备已开启并在有效范围内";
       default:
-        return "未检测到任何蓝牙设备，请确保蓝牙已开启并在有效范围内，然后点击"扫描设备"重试。";
+        return "未检测到任何蓝牙设备，请确保蓝牙已开启并在有效范围内，然后点击\"扫描设备\"重试。";
     }
   };
 
@@ -143,7 +142,7 @@ const BluetoothSelector: React.FC = () => {
         <div className="p-4 border border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800 rounded-md flex items-center">
           <AlertCircle className="text-amber-600 dark:text-amber-400 h-5 w-5 mr-2 flex-shrink-0" />
           <div className="text-amber-800 dark:text-amber-300 text-sm">
-            无法检测到 qiongshuAI 设备，请确保蓝牙已开启并在有效范围内，然后点击"扫描设备"重试。
+            无法检测到 qiongshuAI 设备，请确保蓝牙已开启并在有效范围内，然后点击\"扫描设备\"重试。
           </div>
         </div>
       )}
