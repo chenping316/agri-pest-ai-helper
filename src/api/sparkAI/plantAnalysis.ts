@@ -21,6 +21,9 @@ export async function analyzePlantDisease(
   envData?: EnvData
 ): Promise<DiagnosisResult> {
   try {
+    // 确保图像Base64正确格式化（移除可能的前缀）
+    const formattedImageBase64 = imageBase64.replace(/^data:image\/[a-z]+;base64,/, "");
+    
     // 构建提示内容
     let prompt = "你是一位专业的植物病害识别专家和园艺顾问。";
     prompt += "以下是一张植物图片，请通过图像分析该植物可能患有的疾病。";
@@ -43,15 +46,26 @@ export async function analyzePlantDisease(
     prompt += "4. 至少2-3种治疗方法，每种方法包括：具体步骤、成本（低/中/高）、有效性（低/中/高）和估计价格\n";
     prompt += "请提供有条理、专业的回答，以便我能够理解并处理植物的问题。";
     
+    console.log("开始调用星火API进行植物分析");
+    
     // 调用API
     const apiResponse = await callSparkApi(
       prompt,
-      imageBase64,
+      formattedImageBase64,
       { temperature: 0.3, max_tokens: 2048 }
     );
     
+    console.log("星火API响应成功，正在解析结果");
+    
     // 解析响应
     const result = parseResponseToResult(apiResponse, plantType);
+    
+    console.log("成功解析星火AI分析结果:", {
+      diseaseName: result.name,
+      confidence: result.confidence,
+      treatmentCount: result.treatments.length
+    });
+    
     return result;
   } catch (error) {
     console.error("星火AI植物分析失败:", error);

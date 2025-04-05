@@ -64,6 +64,14 @@ export async function callSparkApi(
       throw new Error("无效的API密码格式，应为'appId:apiKey'");
     }
     
+    console.log("正在调用讯飞星火API...", {
+      url: API_CONFIG.API_URL,
+      appId,
+      hasApiKey: !!apiKey,
+      model: API_CONFIG.DEFAULT_MODEL,
+      imageProvided: !!imageBase64
+    });
+    
     // 发送HTTP请求
     const response = await fetch(API_CONFIG.API_URL, {
       method: "POST",
@@ -78,12 +86,13 @@ export async function callSparkApi(
     // 检查响应状态
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("星火API请求失败:", errorText);
+      console.error("星火API请求失败:", errorText, "状态码:", response.status);
       throw new Error(`星火API请求失败: ${response.status} ${response.statusText}`);
     }
     
     // 解析响应
     const responseData = await response.json();
+    console.log("星火API响应成功:", responseData);
     
     // 提取AI回复
     if (responseData.choices && responseData.choices.length > 0 && 
