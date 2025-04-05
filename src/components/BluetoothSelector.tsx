@@ -98,7 +98,7 @@ const BluetoothSelector: React.FC = () => {
       updateManualEnvData(field, numValue);
     }
   };
-
+  
   const getBluetoothStateMessage = () => {
     switch(bluetoothState) {
       case 'unavailable':
