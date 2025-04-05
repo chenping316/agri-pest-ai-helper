@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -20,7 +19,8 @@ const BluetoothSelector: React.FC = () => {
     manualEnvDataMode,
     setManualEnvDataMode,
     updateManualEnvData,
-    manualEnvData
+    manualEnvData,
+    bluetoothState
   } = useAppContext();
   
   const [isScanning, setIsScanning] = useState(false);
@@ -37,15 +37,29 @@ const BluetoothSelector: React.FC = () => {
     setIsScanning(true);
     try {
       await scanForDevices();
-      toast({
-        title: "扫描完成",
-        description: `发现 ${bluetoothDevices.length} 个设备`,
-      });
+      
+      // 如果扫描后未找到设备，自动启用手动输入模式
+      if (bluetoothDevices.length === 0) {
+        setManualEnvDataMode(true);
+        toast({
+          title: "未检测到蓝牙设备",
+          description: "已自动切换到手动输入模式",
+        });
+      } else {
+        toast({
+          title: "扫描完成",
+          description: `发现 ${bluetoothDevices.length} 个设备`,
+        });
+      }
     } catch (error) {
       console.error("Error scanning for devices:", error);
+      
+      // 如果发生错误，自动启用手动输入模式
+      setManualEnvDataMode(true);
+      
       toast({
         title: "扫描失败",
-        description: "无法扫描蓝牙设备，请检查蓝牙是否已启用。",
+        description: "无法扫描蓝牙设备，已切换到手动输入模式。",
         variant: "destructive"
       });
     } finally {
@@ -85,6 +99,19 @@ const BluetoothSelector: React.FC = () => {
     }
   };
 
+  const getBluetoothStateMessage = () => {
+    switch(bluetoothState) {
+      case 'unavailable':
+        return "您的设备不支持蓝牙功能";
+      case 'disabled':
+        return "请打开蓝牙功能后再尝试扫描";
+      case 'noDevices':
+        return "未检测到任何蓝牙设备，请确保设备已开启并在有效范围内";
+      default:
+        return "未检测到任何蓝牙设备，请确保蓝牙已开启并在有效范围内，然后点击"扫描设备"重试。";
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -93,7 +120,7 @@ const BluetoothSelector: React.FC = () => {
           onClick={handleScan} 
           variant="outline" 
           size="sm"
-          disabled={isScanning}
+          disabled={isScanning || bluetoothState === 'unavailable'}
         >
           <RefreshCw className={`mr-2 h-4 w-4 ${isScanning ? 'animate-spin' : ''}`} />
           {isScanning ? "扫描中..." : "扫描设备"}
@@ -106,7 +133,7 @@ const BluetoothSelector: React.FC = () => {
         <div className="p-4 border border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800 rounded-md flex items-center">
           <AlertCircle className="text-amber-600 dark:text-amber-400 h-5 w-5 mr-2 flex-shrink-0" />
           <div className="text-amber-800 dark:text-amber-300 text-sm">
-            未检测到任何蓝牙设备，请确保蓝牙已开启并在有效范围内，然后点击"扫描设备"重试。
+            {getBluetoothStateMessage()}
           </div>
         </div>
       )}

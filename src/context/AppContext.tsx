@@ -3,6 +3,9 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { AnalysisMode, BluetoothDevice, DiagnosisResult, EnvData, HistoryRecord, User, PlantType } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 
+// 添加蓝牙状态类型
+type BluetoothState = 'available' | 'disabled' | 'unavailable' | 'noDevices';
+
 interface AppContextType {
   user: User | null;
   login: (username: string, password: string) => Promise<boolean>;
@@ -33,6 +36,7 @@ interface AppContextType {
   setManualEnvDataMode: (mode: boolean) => void;
   manualEnvData: EnvData;
   updateManualEnvData: (field: keyof EnvData, value: number) => void;
+  bluetoothState: BluetoothState;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -88,7 +92,34 @@ export const AppProvider: React.FC<{children: ReactNode}> = ({ children }) => {
   const [availablePlantTypes] = useState<PlantType[]>(commonPlantTypes);
   const [manualEnvDataMode, setManualEnvDataMode] = useState(false);
   const [manualEnvData, setManualEnvData] = useState<EnvData>({...defaultEnvData});
+  const [bluetoothState, setBluetoothState] = useState<BluetoothState>('available');
   const { toast } = useToast();
+
+  // 检测蓝牙状态
+  useEffect(() => {
+    const checkBluetoothAvailability = async () => {
+      try {
+        if (!navigator.bluetooth) {
+          setBluetoothState('unavailable');
+          return;
+        }
+        
+        // 尝试获取蓝牙可用性
+        const available = await navigator.bluetooth.getAvailability();
+        if (!available) {
+          setBluetoothState('disabled');
+          return;
+        }
+        
+        setBluetoothState('available');
+      } catch (error) {
+        console.error("Error checking Bluetooth availability:", error);
+        setBluetoothState('unavailable');
+      }
+    };
+    
+    checkBluetoothAvailability();
+  }, []);
 
   // Check for saved login
   useEffect(() => {
@@ -143,11 +174,28 @@ export const AppProvider: React.FC<{children: ReactNode}> = ({ children }) => {
     try {
       // Check if Web Bluetooth is supported
       if (!navigator.bluetooth) {
+        setBluetoothState('unavailable');
         toast({
           title: "不支持蓝牙",
-          description: "您的浏览器不支持Web Bluetooth API，请使用Chrome或Edge浏览器。",
+          description: "您的浏览器不支持Web Bluetooth API，请使用手动输入模式。",
           variant: "destructive"
         });
+        // 自动切换到手动模式
+        setManualEnvDataMode(true);
+        return;
+      }
+
+      // Check if Bluetooth is enabled
+      const available = await navigator.bluetooth.getAvailability();
+      if (!available) {
+        setBluetoothState('disabled');
+        toast({
+          title: "蓝牙已禁用",
+          description: "请开启设备蓝牙功能后再尝试扫描，或使用手动输入模式。",
+          variant: "destructive"
+        });
+        // 自动切换到手动模式
+        setManualEnvDataMode(true);
         return;
       }
 
@@ -182,6 +230,8 @@ export const AppProvider: React.FC<{children: ReactNode}> = ({ children }) => {
         }
       });
 
+      setBluetoothState('available');
+      
       toast({
         title: "发现设备",
         description: `已发现: ${device.name || "未知设备"}`
@@ -192,17 +242,30 @@ export const AppProvider: React.FC<{children: ReactNode}> = ({ children }) => {
       
       // If user cancelled the Bluetooth request
       if ((error as Error).name === 'NotFoundError') {
+        setBluetoothState('noDevices');
         toast({
           title: "未选择设备",
-          description: "您未选择任何蓝牙设备。",
+          description: "未检测到蓝牙设备，已切换到手动输入模式。",
+        });
+        // 自动切换到手动模式
+        setManualEnvDataMode(true);
+      } else if ((error as Error).name === 'SecurityError' || (error as Error).message?.includes('User denied permission')) {
+        setBluetoothState('disabled');
+        toast({
+          title: "权限不足",
+          description: "请允许蓝牙权限，或使用手动输入模式。",
           variant: "destructive"
         });
+        // 自动切换到手动模式
+        setManualEnvDataMode(true);
       } else {
         toast({
           title: "扫描失败",
-          description: "无法扫描蓝牙设备，请确保蓝牙已启用。",
+          description: "无法扫描蓝牙设备，请确保蓝牙已启用或使用手动输入模式。",
           variant: "destructive"
         });
+        // 自动切换到手动模式
+        setManualEnvDataMode(true);
       }
     }
   };
@@ -337,7 +400,8 @@ export const AppProvider: React.FC<{children: ReactNode}> = ({ children }) => {
       manualEnvDataMode,
       setManualEnvDataMode,
       manualEnvData,
-      updateManualEnvData
+      updateManualEnvData,
+      bluetoothState
     }}>
       {children}
     </AppContext.Provider>
