@@ -1,10 +1,11 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, Repeat, Search, Cpu } from "lucide-react";
+import { ExternalLink, Repeat, Search, Cpu, Thermometer, Image, Zap } from "lucide-react";
 import { DiagnosisResult } from "@/types";
 import { openBaiduSearch, searchAdditionalTreatments, searchConnectionIssues } from "@/utils/searchUtils";
 import { Badge } from "@/components/ui/badge";
+import { useAppContext } from "@/context/AppContext";
 
 interface ResultActionsProps {
   resetAnalysis: () => void;
@@ -15,6 +16,8 @@ const ResultActions: React.FC<ResultActionsProps> = ({
   resetAnalysis,
   diagnosisResult
 }) => {
+  const { analysisMode } = useAppContext();
+  
   // Check if this is a network error result (very low confidence indicates fallback)
   const isNetworkError = diagnosisResult && diagnosisResult.confidence <= 0.05;
   
@@ -89,14 +92,28 @@ const ResultActions: React.FC<ResultActionsProps> = ({
         )}
       </div>
       
-      {modelSource && (
-        <div className="flex justify-end">
+      <div className="flex flex-wrap justify-between items-center">
+        {modelSource && (
           <Badge variant="outline" className="flex items-center gap-1">
             <Cpu className="h-3 w-3" />
             <span className="text-xs">分析模型: {modelSource}</span>
           </Badge>
-        </div>
-      )}
+        )}
+        
+        {analysisMode === "image-and-env" && diagnosisResult && (
+          <div className="flex items-center gap-1">
+            <Badge variant="outline" className="flex items-center gap-1 bg-blue-50 text-blue-700 border-blue-200">
+              <Image className="h-3 w-3" />
+              <span className="text-xs">图像分析</span>
+            </Badge>
+            <Zap className="h-3 w-3 text-green-500 mx-0.5" />
+            <Badge variant="outline" className="flex items-center gap-1 bg-blue-50 text-blue-700 border-blue-200">
+              <Thermometer className="h-3 w-3" />
+              <span className="text-xs">环境分析</span>
+            </Badge>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

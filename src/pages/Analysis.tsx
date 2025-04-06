@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Navigate } from "react-router-dom";
 import { useAppContext } from "@/context/AppContext";
@@ -17,6 +16,7 @@ import ConnectionStatus from "@/components/analysis/ConnectionStatus";
 import AnalysisInput from "@/components/analysis/AnalysisInput";
 import AnalysisOutput from "@/components/analysis/AnalysisOutput";
 import InfoMessages from "@/components/analysis/InfoMessages";
+import AnalysisIntegration from "@/components/analysis/AnalysisIntegration";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -152,7 +152,10 @@ const Analysis: React.FC = () => {
           />
           
           {analysisMode === "image-and-env" && (
-            <ConnectionStatus />
+            <>
+              <ConnectionStatus />
+              <AnalysisIntegration analysisMode={analysisMode} />
+            </>
           )}
           
           <div className="mb-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-2">
