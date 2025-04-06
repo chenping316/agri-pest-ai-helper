@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -129,7 +130,7 @@ const BluetoothSelector: React.FC = () => {
       
       <Separator />
       
-      {bluetoothDevices.length === 0 && (
+      {bluetoothDevices.length === 0 && !manualEnvDataMode && (
         <div className="p-4 border border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800 rounded-md flex items-center">
           <AlertCircle className="text-amber-600 dark:text-amber-400 h-5 w-5 mr-2 flex-shrink-0" />
           <div className="text-amber-800 dark:text-amber-300 text-sm">
@@ -138,7 +139,7 @@ const BluetoothSelector: React.FC = () => {
         </div>
       )}
       
-      {bluetoothDevices.length > 0 && !hasQiongshuDevice && (
+      {bluetoothDevices.length > 0 && !hasQiongshuDevice && !manualEnvDataMode && (
         <div className="p-4 border border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800 rounded-md flex items-center">
           <AlertCircle className="text-amber-600 dark:text-amber-400 h-5 w-5 mr-2 flex-shrink-0" />
           <div className="text-amber-800 dark:text-amber-300 text-sm">
@@ -147,61 +148,7 @@ const BluetoothSelector: React.FC = () => {
         </div>
       )}
       
-      {bluetoothDevices.length > 0 ? (
-        <div className="space-y-3">
-          {bluetoothDevices.map((device) => (
-            <div 
-              key={device.id}
-              className={`flex items-center justify-between p-3 rounded-md ${
-                device.name.includes("qiongshuAI") 
-                  ? "bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800" 
-                  : "bg-muted/50"
-              }`}
-            >
-              <div className="flex items-center">
-                <Bluetooth className={`h-4 w-4 mr-2 ${
-                  device.name.includes("qiongshuAI") ? "text-green-600" : "text-primary"
-                }`} />
-                <span>{device.name}</span>
-                {device.connected && (
-                  <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full dark:bg-green-800 dark:text-green-100">
-                    已连接
-                  </span>
-                )}
-                {device.name.includes("qiongshuAI") && !device.connected && (
-                  <span className="ml-2 text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full dark:bg-amber-800 dark:text-amber-100">
-                    推荐连接
-                  </span>
-                )}
-              </div>
-              
-              <Button
-                size="sm"
-                variant={device.connected ? "destructive" : device.name.includes("qiongshuAI") ? "default" : "outline"}
-                onClick={() => device.connected ? handleDisconnect() : handleConnect(device.id)}
-              >
-                {device.connected ? (
-                  <>
-                    <X className="mr-1 h-4 w-4" />
-                    断开
-                  </>
-                ) : (
-                  <>
-                    <Check className="mr-1 h-4 w-4" />
-                    连接
-                  </>
-                )}
-              </Button>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="text-center py-6 text-muted-foreground">
-          {isScanning ? "正在搜索设备..." : "未发现设备，请点击扫描按钮"}
-        </div>
-      )}
-      
-      <div className="flex items-center space-x-2 mt-4">
+      <div className="flex items-center space-x-2">
         <Label htmlFor="manual-mode" className="cursor-pointer">手动输入模式</Label>
         <Button 
           variant="outline" 
@@ -274,6 +221,64 @@ const BluetoothSelector: React.FC = () => {
             </div>
           </CardContent>
         </Card>
+      )}
+      
+      {!manualEnvDataMode && (
+        <>
+          {bluetoothDevices.length > 0 && (
+            <div className="space-y-3">
+              {bluetoothDevices.map((device) => (
+                <div 
+                  key={device.id}
+                  className={`flex items-center justify-between p-3 rounded-md ${
+                    device.name.includes("qiongshuAI") 
+                      ? "bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800" 
+                      : "bg-muted/50"
+                  }`}
+                >
+                  <div className="flex items-center">
+                    <Bluetooth className={`h-4 w-4 mr-2 ${
+                      device.name.includes("qiongshuAI") ? "text-green-600" : "text-primary"
+                    }`} />
+                    <span>{device.name}</span>
+                    {device.connected && (
+                      <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full dark:bg-green-800 dark:text-green-100">
+                        已连接
+                      </span>
+                    )}
+                    {device.name.includes("qiongshuAI") && !device.connected && (
+                      <span className="ml-2 text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full dark:bg-amber-800 dark:text-amber-100">
+                        推荐连接
+                      </span>
+                    )}
+                  </div>
+                  
+                  <Button
+                    size="sm"
+                    variant={device.connected ? "destructive" : device.name.includes("qiongshuAI") ? "default" : "outline"}
+                    onClick={() => device.connected ? handleDisconnect() : handleConnect(device.id)}
+                  >
+                    {device.connected ? (
+                      <>
+                        <X className="mr-1 h-4 w-4" />
+                        断开
+                      </>
+                    ) : (
+                      <>
+                        <Check className="mr-1 h-4 w-4" />
+                        连接
+                      </>
+                    )}
+                  </Button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-6 text-muted-foreground">
+              {isScanning ? "正在搜索设备..." : "未发现设备，请点击扫描按钮"}
+            </div>
+          )}
+        </>
       )}
       
       {envData && !manualEnvDataMode && (

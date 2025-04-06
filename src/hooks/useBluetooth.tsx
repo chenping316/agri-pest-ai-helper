@@ -47,6 +47,8 @@ export const BluetoothProvider: React.FC<{children: ReactNode}> = ({ children })
       try {
         if (!navigator.bluetooth) {
           setBluetoothState('unavailable');
+          // Auto enable manual mode when Bluetooth is unavailable
+          setManualEnvDataMode(true);
           return;
         }
         
@@ -54,6 +56,8 @@ export const BluetoothProvider: React.FC<{children: ReactNode}> = ({ children })
         const available = await navigator.bluetooth.getAvailability();
         if (!available) {
           setBluetoothState('disabled');
+          // Auto enable manual mode when Bluetooth is disabled
+          setManualEnvDataMode(true);
           return;
         }
         
@@ -61,6 +65,8 @@ export const BluetoothProvider: React.FC<{children: ReactNode}> = ({ children })
       } catch (error) {
         console.error("Error checking Bluetooth availability:", error);
         setBluetoothState('unavailable');
+        // Auto enable manual mode on error
+        setManualEnvDataMode(true);
       }
     };
     
@@ -149,7 +155,7 @@ export const BluetoothProvider: React.FC<{children: ReactNode}> = ({ children })
     } catch (error) {
       console.error("Bluetooth scan error:", error);
       
-      // If user cancelled the Bluetooth request
+      // If user cancelled the Bluetooth request or no devices found
       if ((error as Error).name === 'NotFoundError') {
         setBluetoothState('noDevices');
         toast({
