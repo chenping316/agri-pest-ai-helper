@@ -225,7 +225,7 @@ const BluetoothSelector: React.FC = () => {
       
       {!manualEnvDataMode && (
         <>
-          {bluetoothDevices.length > 0 && (
+          {bluetoothDevices.length > 0 ? (
             <div className="space-y-3">
               {bluetoothDevices.map((device) => (
                 <div 
