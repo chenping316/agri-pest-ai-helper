@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Image, Thermometer } from "lucide-react";
 import { useAppContext } from "@/context/AppContext";
 
 const ConnectionStatus: React.FC = () => {
@@ -18,7 +18,17 @@ const ConnectionStatus: React.FC = () => {
           手动环境数据模式
         </Badge>
         <span className="text-sm text-muted-foreground">
-          结合图片和手动输入的环境数据进行分析
+          通过环境数据结合图片进行分析
+        </span>
+      </div>
+      <div className="flex items-center gap-2">
+        <Thermometer className="h-4 w-4 text-blue-600" />
+        <span className="text-xs text-muted-foreground">
+          数据分析将提高识别准确度
+        </span>
+        <Image className="h-4 w-4 ml-2 text-blue-600" />
+        <span className="text-xs text-muted-foreground">
+          结合图片特征进行综合判断
         </span>
       </div>
     </div>
