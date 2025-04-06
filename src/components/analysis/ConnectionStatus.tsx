@@ -15,10 +15,10 @@ const ConnectionStatus: React.FC = () => {
           className="bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300"
         >
           <AlertCircle className="h-3 w-3 mr-1" />
-          手动输入模式
+          手动环境数据模式
         </Badge>
         <span className="text-sm text-muted-foreground">
-          使用手动输入的环境数据进行分析
+          结合图片和手动输入的环境数据进行分析
         </span>
       </div>
     </div>
