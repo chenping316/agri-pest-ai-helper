@@ -1,7 +1,8 @@
+
 import React, { useState } from "react";
 import { Navigate } from "react-router-dom";
 import { useAppContext } from "@/context/AppContext";
-import { Image, Smartphone, Wifi, WifiOff } from "lucide-react";
+import { Image } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { 
   analyzePlantDisease, 
@@ -26,7 +27,6 @@ const Analysis: React.FC = () => {
     isLoggedIn, 
     analysisMode, 
     setAnalysisMode,
-    isBluetoothConnected,
     envData,
     capturedImage,
     setCapturedImage,
@@ -56,15 +56,6 @@ const Analysis: React.FC = () => {
       toast({
         title: "缺少图片",
         description: "请先拍摄或上传植物的照片",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    if (analysisMode === "image-and-env" && !isBluetoothConnected) {
-      toast({
-        title: "未连接设备",
-        description: "您选择了环境数据分析模式，请先连接蓝牙设备",
         variant: "destructive"
       });
       return;
@@ -161,7 +152,7 @@ const Analysis: React.FC = () => {
           />
           
           {analysisMode === "image-and-env" && (
-            <ConnectionStatus isBluetoothConnected={isBluetoothConnected} />
+            <ConnectionStatus />
           )}
           
           <div className="mb-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-2">
@@ -233,7 +224,6 @@ const Analysis: React.FC = () => {
           
           <InfoMessages 
             analysisMode={analysisMode}
-            isBluetoothConnected={isBluetoothConnected}
           />
         </div>
       </main>
